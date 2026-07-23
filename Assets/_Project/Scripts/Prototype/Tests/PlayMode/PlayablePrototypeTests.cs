@@ -19,8 +19,12 @@ namespace ReverseBell.Tests
             Assert.That(GameObject.Find("Player"), Is.Not.Null);
             Assert.That(GameObject.Find("Enemy"), Is.Not.Null);
             Assert.That(GameObject.Find("Ground"), Is.Not.Null);
+            Assert.That(GameObject.Find("Tower Platform 16"), Is.Not.Null);
+            Assert.That(GameObject.Find("Bell Chamber Floor"), Is.Not.Null);
+            Assert.That(GameObject.Find("Tower Bell"), Is.Not.Null);
             Assert.That(Object.FindFirstObjectByType<PlayerAvatar>(), Is.Not.Null);
             Assert.That(Object.FindFirstObjectByType<EnemyRhythmAttacker>(), Is.Not.Null);
+            Assert.That(Object.FindFirstObjectByType<VerticalCameraFollow>(), Is.Not.Null);
 
             Object.Destroy(root);
         }

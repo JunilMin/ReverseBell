@@ -63,6 +63,12 @@ namespace ReverseBell.Prototype
                 return;
             }
 
+            if (Vector2.Distance(transform.position, player.transform.position) > 12f)
+            {
+                HideProjectile();
+                return;
+            }
+
             if (!projectile.gameObject.activeSelf)
             {
                 return;
@@ -106,6 +112,12 @@ namespace ReverseBell.Prototype
         {
             if (defeated)
             {
+                return;
+            }
+
+            if (Vector2.Distance(transform.position, player.transform.position) > 8f)
+            {
+                enemyRenderer.color = idleColor;
                 return;
             }
 
