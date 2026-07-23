@@ -19,6 +19,14 @@ namespace ReverseBell.Prototype
         private Transform projectile;
         private SpriteRenderer projectileRenderer;
         private bool reflected;
+        private bool defeated;
+        private float respawnAt;
+        private ParryGrade reflectedGrade;
+        private int wave = 1;
+
+        public int Health { get; private set; } = 3;
+
+        public int MaxHealth { get; private set; } = 3;
 
         public void Initialize(PrototypeGame owner, PlayerAvatar target, RhythmClock rhythmClock)
         {
@@ -45,6 +53,16 @@ namespace ReverseBell.Prototype
 
         private void Update()
         {
+            if (defeated)
+            {
+                if (Time.time >= respawnAt)
+                {
+                    Respawn();
+                }
+
+                return;
+            }
+
             if (!projectile.gameObject.activeSelf)
             {
                 return;
@@ -63,16 +81,19 @@ namespace ReverseBell.Prototype
 
             if (reflected)
             {
-                game.RegisterParry();
+                int damage = game.RegisterParry(reflectedGrade);
+                ApplyDamage(damage);
                 enemyRenderer.color = Color.white;
                 Invoke(nameof(RestoreEnemyColor), 0.12f);
                 HideProjectile();
                 return;
             }
 
-            if (player.IsParrying)
+            ParryGrade grade = player.EvaluateParry();
+            if (grade != ParryGrade.None)
             {
                 reflected = true;
+                reflectedGrade = grade;
                 projectileRenderer.color = new Color(0.3f, 0.9f, 1f);
                 return;
             }
@@ -83,6 +104,11 @@ namespace ReverseBell.Prototype
 
         private void OnBeat(long beat)
         {
+            if (defeated)
+            {
+                return;
+            }
+
             long beatInBar = beat % 4;
 
             if (beatInBar == 1 && !projectile.gameObject.activeSelf)
@@ -111,8 +137,11 @@ namespace ReverseBell.Prototype
         private void LaunchProjectile()
         {
             reflected = false;
+            reflectedGrade = ParryGrade.None;
             projectile.position = transform.position + Vector3.left * 0.8f;
             projectileRenderer.color = new Color(1f, 0.65f, 0.12f);
+            float scale = 0.42f + (game.ResonanceLevel * 0.025f);
+            projectile.localScale = Vector3.one * scale;
             projectile.gameObject.SetActive(true);
         }
 
@@ -124,8 +153,36 @@ namespace ReverseBell.Prototype
 
         private void RestoreEnemyColor()
         {
+            if (!defeated)
+            {
+                enemyRenderer.color = idleColor;
+            }
+        }
+
+        private void ApplyDamage(int damage)
+        {
+            Health = Mathf.Max(0, Health - damage);
+            if (Health > 0)
+            {
+                return;
+            }
+
+            defeated = true;
+            enemyRenderer.enabled = false;
+            GetComponent<Collider2D>().enabled = false;
+            respawnAt = Time.time + 1.5f;
+            game.RegisterEnemyDefeat(wave);
+        }
+
+        private void Respawn()
+        {
+            wave++;
+            MaxHealth = 3 + Mathf.Min(wave - 1, 3);
+            Health = MaxHealth;
+            defeated = false;
+            enemyRenderer.enabled = true;
             enemyRenderer.color = idleColor;
+            GetComponent<Collider2D>().enabled = true;
         }
     }
 }
-
