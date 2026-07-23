@@ -23,8 +23,12 @@ namespace ReverseBell.Tests
             Assert.That(GameObject.Find("Bell Chamber Floor"), Is.Not.Null);
             Assert.That(GameObject.Find("Tower Bell"), Is.Not.Null);
             Assert.That(Object.FindFirstObjectByType<PlayerAvatar>(), Is.Not.Null);
+            Assert.That(Object.FindFirstObjectByType<ThickStickmanVisual>(), Is.Not.Null);
             Assert.That(Object.FindFirstObjectByType<EnemyRhythmAttacker>(), Is.Not.Null);
             Assert.That(Object.FindFirstObjectByType<VerticalCameraFollow>(), Is.Not.Null);
+            Assert.That(GameObject.Find("Stickman Head"), Is.Not.Null);
+            Assert.That(GameObject.Find("Stickman Left Arm"), Is.Not.Null);
+            Assert.That(GameObject.Find("Stickman Right Leg"), Is.Not.Null);
 
             Object.Destroy(root);
         }

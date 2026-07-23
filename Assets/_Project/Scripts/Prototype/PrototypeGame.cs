@@ -157,6 +157,8 @@ namespace ReverseBell.Prototype
                 new Vector2(0.8f, 1.4f),
                 new Color(0.2f, 0.75f, 1f),
                 false);
+            playerObject.transform.localScale = Vector3.one;
+            playerObject.GetComponent<BoxCollider2D>().size = new Vector2(0.8f, 1.4f);
             player = playerObject.AddComponent<PlayerAvatar>();
 
             GameObject enemyObject = CreateBlock(
