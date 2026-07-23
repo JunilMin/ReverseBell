@@ -7,12 +7,13 @@ namespace ReverseBell.Prototype
     public sealed class PlayerAvatar : MonoBehaviour
     {
         private const float MoveSpeed = 6f;
-        private const float JumpSpeed = 11f;
+        private const float JumpSpeed = 12.5f;
         private const float ParryDuration = 0.18f;
 
         private Rigidbody2D body;
         private SpriteRenderer bodyRenderer;
         private SpriteRenderer parryRenderer;
+        private Vector2 checkpoint = new Vector2(-4.8f, -2.8f);
         private float parryStartedAt = float.NegativeInfinity;
         private float parryUntil;
 
@@ -61,8 +62,13 @@ namespace ReverseBell.Prototype
 
         public void ResetPosition()
         {
-            transform.position = new Vector3(-4.8f, -2.8f, 0f);
+            transform.position = new Vector3(checkpoint.x, checkpoint.y, 0f);
             body.linearVelocity = Vector2.zero;
+        }
+
+        public void SetCheckpoint(Vector2 position)
+        {
+            checkpoint = position;
         }
 
         public ParryGrade EvaluateParry()

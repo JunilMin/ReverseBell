@@ -7,13 +7,24 @@ namespace ReverseBell.Prototype
     {
         private static readonly Color BackgroundColor = new Color(0.035f, 0.045f, 0.08f);
         private static readonly Color GroundColor = new Color(0.13f, 0.15f, 0.22f);
+        private static readonly Color PlatformColor = new Color(0.25f, 0.28f, 0.38f);
+        private static readonly Color AccentColor = new Color(0.55f, 0.42f, 0.2f);
+
+        private const float TowerTop = 30.8f;
+        private const int PlatformCount = 16;
+
+        private readonly float[] platformXPattern = { -4.2f, 0f, 4.2f, 0f };
 
         private PlayerAvatar player;
         private EnemyRhythmAttacker enemy;
         private RhythmClock rhythmClock;
+        private Transform towerBell;
         private GUIStyle titleStyle;
         private GUIStyle bodyStyle;
         private GUIStyle centerStyle;
+        private int checkpointLevel;
+        private bool towerCleared;
+        private float feedbackUntil;
 
         public int Health { get; private set; } = 3;
 
@@ -25,14 +36,13 @@ namespace ReverseBell.Prototype
 
         public int ResonanceLevel => Mathf.Clamp(ResonancePoints / 3, 0, 4);
 
-        public string Feedback { get; private set; } = "적의 공격을 기다리세요";
-
-        private float feedbackUntil;
+        public string Feedback { get; private set; } = "Wait for the enemy attack";
 
         private void Awake()
         {
-            ConfigureCamera();
+            Camera mainCamera = ConfigureCamera();
             CreateStage();
+            mainCamera.GetComponent<VerticalCameraFollow>().Initialize(player.transform);
 
             rhythmClock = FindFirstObjectByType<RhythmClock>();
             enemy.Initialize(this, player, rhythmClock);
@@ -40,15 +50,20 @@ namespace ReverseBell.Prototype
 
         private void Update()
         {
-            if (player.transform.position.y < -7f)
+            if (player.transform.position.y < GetFallLimit())
             {
                 player.ResetPosition();
                 TakeDamage();
             }
 
-            if (Time.time >= feedbackUntil && Feedback != "적의 공격을 기다리세요")
+            UpdateCheckpoint();
+            UpdateTowerGoal();
+
+            if (!towerCleared &&
+                Time.time >= feedbackUntil &&
+                Feedback != "Wait for the enemy attack")
             {
-                Feedback = "적의 공격을 기다리세요";
+                Feedback = "Wait for the enemy attack";
             }
         }
 
@@ -68,7 +83,7 @@ namespace ReverseBell.Prototype
         public void RegisterEnemyDefeat(int wave)
         {
             Score += 500 * wave;
-            Feedback = "ENEMY BREAK — WAVE " + (wave + 1);
+            Feedback = "ENEMY BREAK - WAVE " + (wave + 1);
             feedbackUntil = Time.time + 1.2f;
         }
 
@@ -77,7 +92,7 @@ namespace ReverseBell.Prototype
             Health--;
             Combo = 0;
             ResonancePoints = Mathf.Max(0, ResonancePoints - 3);
-            Feedback = "공격을 놓쳤습니다";
+            Feedback = "DAMAGE TAKEN";
             feedbackUntil = Time.time + 0.8f;
 
             if (Health > 0)
@@ -89,11 +104,11 @@ namespace ReverseBell.Prototype
             Score = 0;
             Combo = 0;
             ResonancePoints = 0;
-            Feedback = "다시 시작!";
+            Feedback = "RESTART";
             feedbackUntil = Time.time + 1f;
         }
 
-        private void ConfigureCamera()
+        private static Camera ConfigureCamera()
         {
             Camera mainCamera = Camera.main;
             if (mainCamera == null)
@@ -107,13 +122,34 @@ namespace ReverseBell.Prototype
             mainCamera.orthographicSize = 5.4f;
             mainCamera.transform.position = new Vector3(0f, 0f, -10f);
             mainCamera.backgroundColor = BackgroundColor;
+
+            VerticalCameraFollow cameraFollow =
+                mainCamera.GetComponent<VerticalCameraFollow>() ??
+                mainCamera.gameObject.AddComponent<VerticalCameraFollow>();
+            return mainCamera;
         }
 
         private void CreateStage()
         {
-            CreateBlock("Ground", new Vector2(0f, -4f), new Vector2(18f, 1f), GroundColor, true);
-            CreateBlock("Left Tower", new Vector2(-7.5f, -1.5f), new Vector2(1f, 4f), GroundColor, true);
-            CreateBlock("Right Tower", new Vector2(7.5f, -1.5f), new Vector2(1f, 4f), GroundColor, true);
+            float towerCenter = (TowerTop - 4f) * 0.5f;
+            float towerHeight = TowerTop + 9f;
+
+            CreateBlock("Ground", new Vector2(0f, -4f), new Vector2(14f, 1f), GroundColor, true);
+            CreateBlock(
+                "Left Tower Wall",
+                new Vector2(-7.2f, towerCenter),
+                new Vector2(0.8f, towerHeight),
+                GroundColor,
+                true);
+            CreateBlock(
+                "Right Tower Wall",
+                new Vector2(7.2f, towerCenter),
+                new Vector2(0.8f, towerHeight),
+                GroundColor,
+                true);
+
+            CreateTowerPlatforms();
+            CreateTowerDecorations();
 
             GameObject playerObject = CreateBlock(
                 "Player",
@@ -130,6 +166,63 @@ namespace ReverseBell.Prototype
                 new Color(0.95f, 0.2f, 0.28f),
                 true);
             enemy = enemyObject.AddComponent<EnemyRhythmAttacker>();
+
+            towerBell = CreateVisualBlock(
+                "Tower Bell",
+                new Vector2(0f, TowerTop + 1.2f),
+                new Vector2(1.4f, 1.8f),
+                new Color(1f, 0.72f, 0.16f)).transform;
+        }
+
+        private void CreateTowerPlatforms()
+        {
+            for (int index = 0; index < PlatformCount; index++)
+            {
+                float y = -1.7f + (index * 2.05f);
+                float x = platformXPattern[index % platformXPattern.Length];
+                float width = index % 4 == 3 ? 4.8f : 4.2f;
+
+                CreateBlock(
+                    "Tower Platform " + (index + 1),
+                    new Vector2(x, y),
+                    new Vector2(width, 0.38f),
+                    PlatformColor,
+                    true);
+
+                if ((index + 1) % 5 == 0)
+                {
+                    CreateVisualBlock(
+                        "Checkpoint Banner " + (index + 1),
+                        new Vector2(x, y + 0.9f),
+                        new Vector2(0.22f, 1.4f),
+                        new Color(0.18f, 0.7f, 0.75f));
+                }
+            }
+
+            CreateBlock(
+                "Bell Chamber Floor",
+                new Vector2(0f, TowerTop),
+                new Vector2(10f, 0.5f),
+                AccentColor,
+                true);
+        }
+
+        private static void CreateTowerDecorations()
+        {
+            for (int floor = 0; floor < 10; floor++)
+            {
+                float y = -1f + (floor * 3.2f);
+                CreateVisualBlock(
+                    "Left Window " + floor,
+                    new Vector2(-6.65f, y),
+                    new Vector2(0.35f, 1.2f),
+                    new Color(0.12f, 0.3f, 0.46f));
+                CreateVisualBlock(
+                    "Right Window " + floor,
+                    new Vector2(6.65f, y + 1.6f),
+                    new Vector2(0.35f, 1.2f),
+                    new Color(0.12f, 0.3f, 0.46f));
+            }
         }
 
         private static GameObject CreateBlock(
@@ -147,7 +240,7 @@ namespace ReverseBell.Prototype
             renderer.sprite = PrototypeVisuals.WhiteSprite;
             renderer.color = color;
 
-            var collider = block.AddComponent<BoxCollider2D>();
+            block.AddComponent<BoxCollider2D>();
 
             if (isStatic)
             {
@@ -158,24 +251,96 @@ namespace ReverseBell.Prototype
             return block;
         }
 
+        private static GameObject CreateVisualBlock(
+            string objectName,
+            Vector2 position,
+            Vector2 scale,
+            Color color)
+        {
+            var block = new GameObject(objectName);
+            block.transform.position = position;
+            block.transform.localScale = scale;
+
+            var renderer = block.AddComponent<SpriteRenderer>();
+            renderer.sprite = PrototypeVisuals.WhiteSprite;
+            renderer.color = color;
+            renderer.sortingOrder = -2;
+            return block;
+        }
+
+        private void UpdateCheckpoint()
+        {
+            int reachedLevel = Mathf.Clamp(
+                Mathf.FloorToInt((player.transform.position.y + 1.7f) / 2.05f),
+                0,
+                PlatformCount);
+            int reachedCheckpoint = reachedLevel / 5;
+
+            if (reachedCheckpoint <= checkpointLevel)
+            {
+                return;
+            }
+
+            checkpointLevel = reachedCheckpoint;
+            int platformIndex = Mathf.Min((checkpointLevel * 5) - 1, PlatformCount - 1);
+            float checkpointX = platformXPattern[platformIndex % platformXPattern.Length];
+            float checkpointY = -1.7f + (platformIndex * 2.05f) + 1.1f;
+            player.SetCheckpoint(new Vector2(checkpointX, checkpointY));
+            Feedback = "CHECKPOINT " + checkpointLevel;
+            feedbackUntil = Time.time + 1.2f;
+        }
+
+        private void UpdateTowerGoal()
+        {
+            if (towerCleared || towerBell == null)
+            {
+                return;
+            }
+
+            if (Vector2.Distance(player.transform.position, towerBell.position) > 2f)
+            {
+                return;
+            }
+
+            towerCleared = true;
+            Score += 5000;
+            Feedback = "TOWER ASCENT COMPLETE!";
+            feedbackUntil = float.PositiveInfinity;
+            towerBell.GetComponent<SpriteRenderer>().color = new Color(0.4f, 1f, 0.75f);
+        }
+
+        private float GetFallLimit()
+        {
+            return checkpointLevel == 0 ? -7f : (checkpointLevel * 10.25f) - 8f;
+        }
+
         private void OnGUI()
         {
             InitializeGuiStyles();
 
-            GUI.Label(new Rect(24f, 18f, 500f, 40f), "REVERSE BELL — PLAYABLE PROTOTYPE", titleStyle);
-            GUI.Label(new Rect(26f, 62f, 600f, 90f),
-                "이동  A/D 또는 ←/→    점프  Space    패링  J\n" +
-                "패드  Left Stick       점프  A        패링  X",
+            GUI.Label(
+                new Rect(24f, 18f, 600f, 40f),
+                "REVERSE BELL - VERTICAL TOWER",
+                titleStyle);
+            GUI.Label(
+                new Rect(26f, 62f, 650f, 90f),
+                "MOVE  A/D or ARROWS    JUMP  SPACE    PARRY  J/K\n" +
+                "CLIMB TO THE BELL AT THE TOP",
                 bodyStyle);
 
             string beatText = rhythmClock == null ? "-" : (rhythmClock.CurrentBeat + 1).ToString();
+            int floor = Mathf.Clamp(
+                Mathf.FloorToInt((player.transform.position.y + 4f) / 2.05f) + 1,
+                1,
+                PlatformCount + 1);
             GUI.Label(
-                new Rect(Screen.width - 350f, 24f, 320f, 150f),
-                "HP  " + new string('●', Health) +
+                new Rect(Screen.width - 350f, 24f, 320f, 180f),
+                "HP  " + Health +
                 "\nSCORE  " + Score +
                 "\nCOMBO  x" + Combo +
                 "\nRESONANCE  " + ResonanceLevel + " / 4" +
                 "\nENEMY  " + enemy.Health + " / " + enemy.MaxHealth +
+                "\nFLOOR  " + floor + " / " + (PlatformCount + 1) +
                 "\nBEAT  " + beatText,
                 bodyStyle);
 
