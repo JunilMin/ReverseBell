@@ -51,6 +51,7 @@ ExportedObj/
 *.csproj
 *.unityproj
 *.sln
+*.slnx
 *.suo
 *.tmp
 *.user
@@ -86,6 +87,7 @@ crashlytics-build.properties
 
 # TestRunner generated files
 InitTestScene*.unity*
+/TestResults*.xml
 
 # Addressables default ignores, before user customizations
 /ServerData
