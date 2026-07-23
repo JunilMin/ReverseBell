@@ -13,6 +13,7 @@ namespace ReverseBell.Prototype
         private Rigidbody2D body;
         private SpriteRenderer bodyRenderer;
         private SpriteRenderer parryRenderer;
+        private float parryStartedAt = float.NegativeInfinity;
         private float parryUntil;
 
         public bool IsParrying => Time.time <= parryUntil;
@@ -48,6 +49,7 @@ namespace ReverseBell.Prototype
 
             if (WasParryPressed())
             {
+                parryStartedAt = Time.time;
                 parryUntil = Time.time + ParryDuration;
             }
 
@@ -61,6 +63,17 @@ namespace ReverseBell.Prototype
         {
             transform.position = new Vector3(-4.8f, -2.8f, 0f);
             body.linearVelocity = Vector2.zero;
+        }
+
+        public ParryGrade EvaluateParry()
+        {
+            if (!IsParrying)
+            {
+                return ParryGrade.None;
+            }
+
+            float elapsed = Time.time - parryStartedAt;
+            return elapsed <= 0.085f ? ParryGrade.Perfect : ParryGrade.Good;
         }
 
         private bool IsGrounded()

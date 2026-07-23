@@ -24,6 +24,29 @@ namespace ReverseBell.Tests
 
             Object.Destroy(root);
         }
+
+        [UnityTest]
+        public IEnumerator CombatProgress_ParriesBuildComboAndResonance()
+        {
+            var root = new GameObject("Combat Progress Test Root");
+            var game = root.AddComponent<PrototypeGame>();
+
+            yield return null;
+
+            game.RegisterParry(ParryGrade.Good);
+            game.RegisterParry(ParryGrade.Perfect);
+
+            Assert.That(game.Combo, Is.EqualTo(2));
+            Assert.That(game.ResonancePoints, Is.EqualTo(3));
+            Assert.That(game.ResonanceLevel, Is.EqualTo(1));
+            Assert.That(game.Score, Is.GreaterThan(0));
+
+            game.TakeDamage();
+
+            Assert.That(game.Combo, Is.Zero);
+            Assert.That(game.ResonancePoints, Is.Zero);
+
+            Object.Destroy(root);
+        }
     }
 }
-

@@ -19,6 +19,12 @@ namespace ReverseBell.Prototype
 
         public int Score { get; private set; }
 
+        public int Combo { get; private set; }
+
+        public int ResonancePoints { get; private set; }
+
+        public int ResonanceLevel => Mathf.Clamp(ResonancePoints / 3, 0, 4);
+
         public string Feedback { get; private set; } = "적의 공격을 기다리세요";
 
         private float feedbackUntil;
@@ -46,16 +52,31 @@ namespace ReverseBell.Prototype
             }
         }
 
-        public void RegisterParry()
+        public int RegisterParry(ParryGrade grade)
         {
-            Score++;
-            Feedback = "PERFECT PARRY!";
+            Combo++;
+
+            bool isPerfect = grade == ParryGrade.Perfect;
+            Score += isPerfect ? 150 + (Combo * 10) : 75 + (Combo * 5);
+            ResonancePoints = Mathf.Min(12, ResonancePoints + (isPerfect ? 2 : 1));
+            Feedback = isPerfect ? "PERFECT PARRY!" : "GOOD PARRY";
             feedbackUntil = Time.time + 0.8f;
+
+            return isPerfect && ResonanceLevel >= 4 ? 2 : 1;
+        }
+
+        public void RegisterEnemyDefeat(int wave)
+        {
+            Score += 500 * wave;
+            Feedback = "ENEMY BREAK — WAVE " + (wave + 1);
+            feedbackUntil = Time.time + 1.2f;
         }
 
         public void TakeDamage()
         {
             Health--;
+            Combo = 0;
+            ResonancePoints = Mathf.Max(0, ResonancePoints - 3);
             Feedback = "공격을 놓쳤습니다";
             feedbackUntil = Time.time + 0.8f;
 
@@ -66,6 +87,8 @@ namespace ReverseBell.Prototype
 
             Health = 3;
             Score = 0;
+            Combo = 0;
+            ResonancePoints = 0;
             Feedback = "다시 시작!";
             feedbackUntil = Time.time + 1f;
         }
@@ -147,8 +170,13 @@ namespace ReverseBell.Prototype
 
             string beatText = rhythmClock == null ? "-" : (rhythmClock.CurrentBeat + 1).ToString();
             GUI.Label(
-                new Rect(Screen.width - 330f, 24f, 300f, 100f),
-                "HP  " + new string('●', Health) + "\nPARRY  " + Score + "\nBEAT  " + beatText,
+                new Rect(Screen.width - 350f, 24f, 320f, 150f),
+                "HP  " + new string('●', Health) +
+                "\nSCORE  " + Score +
+                "\nCOMBO  x" + Combo +
+                "\nRESONANCE  " + ResonanceLevel + " / 4" +
+                "\nENEMY  " + enemy.Health + " / " + enemy.MaxHealth +
+                "\nBEAT  " + beatText,
                 bodyStyle);
 
             GUI.Label(
@@ -185,4 +213,3 @@ namespace ReverseBell.Prototype
         }
     }
 }
-
