@@ -11,7 +11,8 @@ namespace ReverseBell.Prototype
         private static readonly Color PlatformColor = new Color(0.25f, 0.28f, 0.38f);
         private static readonly Color AccentColor = new Color(0.55f, 0.42f, 0.2f);
 
-        private const int PlatformCount = 16;
+        private const int PlatformCount = 50;
+        private const int PlayerMaximumHealth = 10;
         private const float PlatformStartY = -1.6f;
         private const float PlatformSpacing = 2.35f;
         private const float TowerTop =
@@ -30,8 +31,10 @@ namespace ReverseBell.Prototype
         private int checkpointLevel;
         private bool towerCleared;
         private float feedbackUntil;
+        private WorldHealthBar playerHealthBar;
 
-        public int Health { get; private set; } = 3;
+        public int Health { get; private set; } = PlayerMaximumHealth;
+        public int MaxHealth => PlayerMaximumHealth;
 
         public int Score { get; private set; }
 
@@ -65,6 +68,9 @@ namespace ReverseBell.Prototype
                     enemy.transform.position.x - 1.8f,
                     enemy.transform.position.x + 1.8f);
             }
+
+            var hazardDirector = gameObject.AddComponent<TowerHazardDirector>();
+            hazardDirector.Initialize(this, player);
         }
 
         private void OnDestroy()
@@ -93,7 +99,7 @@ namespace ReverseBell.Prototype
             if (player.transform.position.y < GetFallLimit())
             {
                 player.ResetPosition();
-                TakeDamage();
+                TakeDamage(2);
             }
 
             UpdateCheckpoint();
@@ -107,7 +113,7 @@ namespace ReverseBell.Prototype
             }
         }
 
-        public int RegisterParry(ParryGrade grade)
+        public void RegisterParry(ParryGrade grade)
         {
             Combo++;
 
@@ -117,7 +123,15 @@ namespace ReverseBell.Prototype
             Feedback = isPerfect ? "PERFECT PARRY!" : "GOOD PARRY";
             feedbackUntil = Time.time + 0.8f;
 
-            return isPerfect && ResonanceLevel >= 4 ? 2 : 1;
+        }
+
+        public void RegisterHazardParry()
+        {
+            Combo++;
+            Score += 100 + (Combo * 5);
+            ResonancePoints = Mathf.Min(12, ResonancePoints + 1);
+            Feedback = "TRAP PARRIED!";
+            feedbackUntil = Time.time + 0.65f;
         }
 
         public void RegisterEnemyDefeat(HumanoidMeleeEnemy enemy)
@@ -142,7 +156,7 @@ namespace ReverseBell.Prototype
                 return false;
             }
 
-            target.ReceivePlayerAttack(1);
+            target.ReceivePlayerAttack(3);
             Score += 50;
             Feedback = "SWORD HIT";
             feedbackUntil = Time.time + 0.45f;
@@ -169,7 +183,7 @@ namespace ReverseBell.Prototype
                     continue;
                 }
 
-                enemy.ReceivePlayerAttack(3);
+                enemy.ReceivePlayerAttack(8);
                 hitCount++;
             }
 
@@ -219,25 +233,29 @@ namespace ReverseBell.Prototype
             return closest;
         }
 
-        public void TakeDamage()
+        public void TakeDamage(int amount = 1)
         {
-            Health--;
+            Health = Mathf.Max(0, Health - Mathf.Max(1, amount));
             Combo = 0;
             ResonancePoints = Mathf.Max(0, ResonancePoints - 3);
             Feedback = "DAMAGE TAKEN";
             feedbackUntil = Time.time + 0.8f;
+            player.ShowHurt();
+            playerHealthBar.SetHealth(Health, PlayerMaximumHealth);
 
             if (Health > 0)
             {
                 return;
             }
 
-            Health = 3;
+            Health = PlayerMaximumHealth;
             Score = 0;
             Combo = 0;
             ResonancePoints = 0;
             Feedback = "RESTART";
             feedbackUntil = Time.time + 1f;
+            player.ResetPosition();
+            playerHealthBar.SetHealth(Health, PlayerMaximumHealth);
         }
 
         private static Camera ConfigureCamera()
@@ -284,6 +302,9 @@ namespace ReverseBell.Prototype
             CreateTowerDecorations();
 
             player = CreatePlayer(new Vector2(-5.5f, -2.8f));
+            playerHealthBar = player.gameObject.AddComponent<WorldHealthBar>();
+            playerHealthBar.Initialize(1.15f, 1.35f, new Color(0.2f, 0.9f, 0.35f));
+            playerHealthBar.SetHealth(Health, PlayerMaximumHealth);
             CreateEnemy("Sword Guard", new Vector2(5f, -2.8f), EnemyWeaponType.Sword);
             CreateEnemy(
                 "Spear Guard",
@@ -293,6 +314,7 @@ namespace ReverseBell.Prototype
                 "Shield Guard",
                 new Vector2(-5f, PlatformY(8) + EnemyStandingOffset),
                 EnemyWeaponType.Shield);
+            CreateUpperTowerEnemies();
 
             towerBell = CreateVisualBlock(
                 "Tower Bell",
@@ -321,6 +343,24 @@ namespace ReverseBell.Prototype
             var enemy = enemyObject.AddComponent<HumanoidMeleeEnemy>();
             enemy.SetWeaponType(weaponType);
             enemies.Add(enemy);
+        }
+
+        private void CreateUpperTowerEnemies()
+        {
+            for (int floorIndex = 12; floorIndex < PlatformCount; floorIndex += 4)
+            {
+                EnemyWeaponType type = ((floorIndex / 4) % 3) switch
+                {
+                    0 => EnemyWeaponType.Sword,
+                    1 => EnemyWeaponType.Spear,
+                    _ => EnemyWeaponType.Shield
+                };
+                float x = platformXPattern[floorIndex % platformXPattern.Length];
+                CreateEnemy(
+                    type + " Guard Floor " + (floorIndex + 1),
+                    new Vector2(x, PlatformY(floorIndex) + EnemyStandingOffset),
+                    type);
+            }
         }
 
         private void CreateTowerPlatforms()
@@ -363,7 +403,8 @@ namespace ReverseBell.Prototype
 
         private static void CreateTowerDecorations()
         {
-            for (int floor = 0; floor < 11; floor++)
+            int decorationCount = Mathf.CeilToInt(TowerTop / 3.55f) + 1;
+            for (int floor = 0; floor < decorationCount; floor++)
             {
                 float y = -1f + (floor * 3.55f);
                 CreateVisualBlock(
@@ -488,16 +529,16 @@ namespace ReverseBell.Prototype
             int floor = Mathf.Clamp(
                 Mathf.FloorToInt((player.transform.position.y + 4f) / PlatformSpacing) + 1,
                 1,
-                PlatformCount + 1);
+                PlatformCount);
             GUI.Label(
                 new Rect(Screen.width - 350f, 24f, 320f, 180f),
-                "HP  " + Health +
+                "HP  " + Health + " / " + PlayerMaximumHealth +
                 "\nSCORE  " + Score +
                 "\nCOMBO  x" + Combo +
                 "\nRESONANCE  " + ResonanceLevel + " / 4" +
                 (ResonanceLevel >= 4 ? "  SPECIAL READY" : string.Empty) +
                 "\nENEMIES  " + EnemiesRemaining +
-                "\nFLOOR  " + floor + " / " + (PlatformCount + 1) +
+                "\nFLOOR  " + floor + " / " + PlatformCount +
                 "\nBEAT  " + beatText,
                 bodyStyle);
 

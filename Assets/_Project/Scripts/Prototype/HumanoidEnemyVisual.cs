@@ -34,6 +34,8 @@ namespace ReverseBell.Prototype
         private bool attacking;
         private bool reacting;
         private bool dying;
+        private Transform stunIndicator;
+        private float stunnedUntil;
 
         public float DeathDuration =>
             deathLeft == null ? 0f : deathLeft.Length / ReactionFramesPerSecond;
@@ -44,6 +46,7 @@ namespace ReverseBell.Prototype
             characterRenderer = GetComponent<SpriteRenderer>();
             characterRenderer.sortingOrder = 3;
             characterRenderer.color = EnemyTint(type);
+            CreateStunIndicator();
 
             idleLeft = LoadFrames("L_Idle");
             idleRight = LoadFrames("R_Idle");
@@ -70,6 +73,8 @@ namespace ReverseBell.Prototype
 
         private void Update()
         {
+            UpdateStunIndicator();
+
             if (currentFrames == null || currentFrames.Length == 0)
             {
                 return;
@@ -193,6 +198,22 @@ namespace ReverseBell.Prototype
             PlayOnce(FacingFrames(hitLeft, hitRight), ReactionFramesPerSecond);
         }
 
+        public void PlayStun(float duration)
+        {
+            if (dying)
+            {
+                return;
+            }
+
+            stunnedUntil = Time.time + duration;
+            reacting = true;
+            attacking = false;
+            telegraphing = false;
+            characterRenderer.color = new Color(0.55f, 0.9f, 1f);
+            PlayLoop(FacingFrames(hitLeft, hitRight), 8f);
+            stunIndicator.gameObject.SetActive(true);
+        }
+
         public void PlayDeath()
         {
             dying = true;
@@ -271,6 +292,49 @@ namespace ReverseBell.Prototype
                 EnemyWeaponType.Shield => new Color(1f, 0.78f, 0.58f),
                 _ => Color.white
             };
+        }
+
+        private void CreateStunIndicator()
+        {
+            stunIndicator = new GameObject("Stun Indicator").transform;
+            stunIndicator.SetParent(transform, false);
+            stunIndicator.localPosition = new Vector3(0f, 1.15f, 0f);
+
+            for (int index = 0; index < 3; index++)
+            {
+                var star = new GameObject("Stun Star " + (index + 1));
+                star.transform.SetParent(stunIndicator, false);
+                float angle = index * Mathf.PI * 2f / 3f;
+                star.transform.localPosition =
+                    new Vector3(Mathf.Cos(angle) * 0.3f, Mathf.Sin(angle) * 0.12f, 0f);
+                star.transform.localScale = new Vector3(0.12f, 0.12f, 1f);
+                var renderer = star.AddComponent<SpriteRenderer>();
+                renderer.sprite = PrototypeVisuals.CircleSprite;
+                renderer.color = new Color(1f, 0.9f, 0.2f);
+                renderer.sortingOrder = 25;
+            }
+
+            stunIndicator.gameObject.SetActive(false);
+        }
+
+        private void UpdateStunIndicator()
+        {
+            if (stunIndicator == null || !stunIndicator.gameObject.activeSelf)
+            {
+                return;
+            }
+
+            if (Time.time >= stunnedUntil)
+            {
+                stunIndicator.gameObject.SetActive(false);
+                reacting = false;
+                characterRenderer.color = EnemyTint(weaponType);
+                PlayLoop(FacingFrames(idleLeft, idleRight), IdleFramesPerSecond);
+                return;
+            }
+
+            stunIndicator.localRotation =
+                Quaternion.Euler(0f, 0f, Time.time * 220f);
         }
     }
 }

@@ -22,6 +22,7 @@ namespace ReverseBell.Tests
             Assert.That(GameObject.Find("Shield Guard"), Is.Not.Null);
             Assert.That(GameObject.Find("Ground"), Is.Not.Null);
             Assert.That(GameObject.Find("Tower Platform 16"), Is.Not.Null);
+            Assert.That(GameObject.Find("Tower Platform 50"), Is.Not.Null);
             Assert.That(GameObject.Find("Bell Chamber Floor"), Is.Not.Null);
             Assert.That(GameObject.Find("Tower Bell"), Is.Not.Null);
             Assert.That(Object.FindFirstObjectByType<PlayerAvatar>(), Is.Not.Null);
@@ -32,10 +33,22 @@ namespace ReverseBell.Tests
             Assert.That(GameObject.Find("Rhythm Projectile"), Is.Null);
 
             HeroSwordsmanVisual hero = Object.FindFirstObjectByType<HeroSwordsmanVisual>();
-            hero.SetPose(1f, 0f, true, false);
+            hero.SetPose(1f, 0f, true, HeroActionState.None);
             Assert.That(hero.FacesRight, Is.True);
-            hero.SetPose(-1f, 0f, true, false);
+            hero.SetPose(-1f, 0f, true, HeroActionState.None);
             Assert.That(hero.FacesRight, Is.False);
+
+            var heroRenderer = hero.GetComponent<SpriteRenderer>();
+            hero.SetPose(0f, 0f, true, HeroActionState.Attack);
+            Sprite attackSprite = heroRenderer.sprite;
+            hero.SetPose(0f, 0f, true, HeroActionState.Parry);
+            Sprite parrySprite = heroRenderer.sprite;
+            hero.SetPose(0f, 0f, true, HeroActionState.Special);
+            Sprite specialSprite = heroRenderer.sprite;
+            Assert.That(parrySprite, Is.Not.SameAs(attackSprite));
+            Assert.That(specialSprite, Is.Not.SameAs(attackSprite));
+            Assert.That(specialSprite, Is.Not.SameAs(parrySprite));
+            Assert.That(GameObject.Find("Player").GetComponent<WorldHealthBar>(), Is.Not.Null);
 
             Object.Destroy(root);
         }
@@ -65,7 +78,7 @@ namespace ReverseBell.Tests
 
             while (target != null && target.Health > 0)
             {
-                target.ReceiveParry(ParryGrade.Perfect);
+                target.ReceivePlayerAttack(target.MaxHealth);
             }
 
             yield return null;
@@ -114,7 +127,7 @@ namespace ReverseBell.Tests
             int startingHealth = shield.Health;
 
             Assert.That(game.PerformPlayerAttack(1f), Is.True);
-            Assert.That(shield.Health, Is.EqualTo(startingHealth - 1));
+            Assert.That(shield.Health, Is.EqualTo(startingHealth - 3));
             Assert.That(game.PerformPlayerAttack(-1f), Is.False);
 
             Object.Destroy(root);
@@ -141,7 +154,48 @@ namespace ReverseBell.Tests
 
             Assert.That(game.TryPerformSpecial(1f), Is.True);
             Assert.That(game.ResonancePoints, Is.Zero);
-            Assert.That(shield.Health, Is.EqualTo(startingHealth - 3));
+            Assert.That(shield.Health, Is.EqualTo(startingHealth - 8));
+
+            Object.Destroy(root);
+        }
+
+        [UnityTest]
+        public IEnumerator Parry_StunsAndPushesEnemyWithoutHealthDamage()
+        {
+            var root = new GameObject("Parry Stun Test Root");
+            var game = root.AddComponent<PrototypeGame>();
+            yield return null;
+
+            HumanoidMeleeEnemy enemy = game.GetEnemy(EnemyWeaponType.Sword);
+            int startingHealth = enemy.Health;
+            float startingX = enemy.transform.position.x;
+
+            enemy.ReceiveParry(ParryGrade.Perfect);
+
+            Assert.That(enemy.Health, Is.EqualTo(startingHealth));
+            Assert.That(enemy.IsStunned, Is.True);
+            Assert.That(enemy.transform.position.x, Is.Not.EqualTo(startingX));
+
+            yield return new WaitForSeconds(1.1f);
+            Assert.That(enemy.IsStunned, Is.False);
+
+            Object.Destroy(root);
+        }
+
+        [UnityTest]
+        public IEnumerator WallTrap_DamagesPlayerWhenNotParried()
+        {
+            var root = new GameObject("Wall Trap Test Root");
+            var game = root.AddComponent<PrototypeGame>();
+            yield return null;
+
+            int startingHealth = game.Health;
+            var trapObject = new GameObject("Test Wall Arrow");
+            var trap = trapObject.AddComponent<WallTrapProjectile>();
+            trap.Initialize(game, game.PlayerCharacter, Vector2.right, 0f, 2, false);
+            trap.ResolveImpact();
+
+            Assert.That(game.Health, Is.EqualTo(startingHealth - 2));
 
             Object.Destroy(root);
         }

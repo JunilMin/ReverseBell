@@ -12,6 +12,7 @@ namespace ReverseBell.Prototype
         private const float ParryDuration = 0.18f;
         private const float AttackDuration = 0.28f;
         private const float SpecialDuration = 0.45f;
+        private const float HurtDuration = 0.35f;
         private const float AttackCooldown = 0.32f;
         private const float SpecialCooldown = 0.7f;
 
@@ -32,11 +33,36 @@ namespace ReverseBell.Prototype
         private float queuedSpecialDirection;
         private bool attackImpactQueued;
         private bool specialImpactQueued;
+        private float hurtUntil;
 
         public bool IsParrying => Time.time <= parryUntil;
         public float FacingDirection => facingDirection;
         public bool IsSwordAction =>
             IsParrying || Time.time <= attackUntil || Time.time <= specialUntil;
+        public HeroActionState CurrentAction
+        {
+            get
+            {
+                if (Time.time <= hurtUntil)
+                {
+                    return HeroActionState.Hurt;
+                }
+
+                if (Time.time <= specialUntil)
+                {
+                    return HeroActionState.Special;
+                }
+
+                if (IsParrying)
+                {
+                    return HeroActionState.Parry;
+                }
+
+                return Time.time <= attackUntil
+                    ? HeroActionState.Attack
+                    : HeroActionState.None;
+            }
+        }
 
         public event Action<float> AttackRequested;
         public event Action<float> SpecialRequested;
@@ -112,7 +138,7 @@ namespace ReverseBell.Prototype
             }
 
             parryRenderer.enabled = IsParrying;
-            characterVisual.SetPose(movement, body.linearVelocity.y, IsGrounded(), IsSwordAction);
+            characterVisual.SetPose(movement, body.linearVelocity.y, IsGrounded(), CurrentAction);
         }
 
         private void ResolveQueuedCombatImpacts()
@@ -139,6 +165,11 @@ namespace ReverseBell.Prototype
         public void SetCheckpoint(Vector2 position)
         {
             checkpoint = position;
+        }
+
+        public void ShowHurt()
+        {
+            hurtUntil = Time.time + HurtDuration;
         }
 
         public ParryGrade EvaluateParry()

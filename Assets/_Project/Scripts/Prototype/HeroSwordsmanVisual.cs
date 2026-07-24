@@ -14,9 +14,12 @@ namespace ReverseBell.Prototype
         private Sprite[] runFrames;
         private Sprite[] jumpFrames;
         private Sprite[] attackFrames;
+        private Sprite[] parryFrames;
+        private Sprite[] specialFrames;
+        private Sprite[] hurtFrames;
         private float facing = 1f;
-        private float swordAnimationStartedAt;
-        private bool wasUsingSword;
+        private float actionAnimationStartedAt;
+        private HeroActionState previousAction;
 
         public bool FacesRight => characterRenderer != null && !characterRenderer.flipX;
 
@@ -50,11 +53,33 @@ namespace ReverseBell.Prototype
                 1,
                 6,
                 44f);
+            parryFrames = CreateFrames(
+                Resources.Load<Texture2D>("HeroSwordsman/Slide"),
+                2,
+                2,
+                4,
+                48f);
+            specialFrames = CreateFrames(
+                Resources.Load<Texture2D>("HeroSwordsman/JumpAttack"),
+                6,
+                1,
+                6,
+                40f);
+            hurtFrames = CreateFrames(
+                Resources.Load<Texture2D>("HeroSwordsman/HurtAndDie"),
+                3,
+                4,
+                3,
+                52f);
 
             characterRenderer.sprite = idleFrames[0];
         }
 
-        public void SetPose(float movement, float verticalVelocity, bool isGrounded, bool isUsingSword)
+        public void SetPose(
+            float movement,
+            float verticalVelocity,
+            bool isGrounded,
+            HeroActionState action)
         {
             if (Mathf.Abs(movement) > 0.05f)
             {
@@ -63,23 +88,28 @@ namespace ReverseBell.Prototype
 
             characterRenderer.flipX = facing < 0f;
 
-            if (isUsingSword)
+            if (action != HeroActionState.None)
             {
-                if (!wasUsingSword)
+                if (action != previousAction)
                 {
-                    swordAnimationStartedAt = Time.time;
+                    actionAnimationStartedAt = Time.time;
                 }
 
-                float elapsed = Time.time - swordAnimationStartedAt;
-                int attackIndex = Mathf.Min(
-                    Mathf.FloorToInt(elapsed * AttackFramesPerSecond),
-                    attackFrames.Length - 1);
-                characterRenderer.sprite = attackFrames[attackIndex];
-                wasUsingSword = true;
+                Sprite[] frames = FramesForAction(action);
+                float speed = action == HeroActionState.Special ? 14f :
+                    action == HeroActionState.Parry ? 18f :
+                    action == HeroActionState.Hurt ? 12f :
+                    AttackFramesPerSecond;
+                float elapsed = Time.time - actionAnimationStartedAt;
+                int frameIndex = Mathf.Min(
+                    Mathf.FloorToInt(elapsed * speed),
+                    frames.Length - 1);
+                characterRenderer.sprite = frames[frameIndex];
+                previousAction = action;
                 return;
             }
 
-            wasUsingSword = false;
+            previousAction = HeroActionState.None;
 
             if (!isGrounded)
             {
@@ -96,6 +126,17 @@ namespace ReverseBell.Prototype
             }
 
             characterRenderer.sprite = GetLoopFrame(idleFrames, IdleFramesPerSecond);
+        }
+
+        private Sprite[] FramesForAction(HeroActionState action)
+        {
+            return action switch
+            {
+                HeroActionState.Parry => parryFrames,
+                HeroActionState.Special => specialFrames,
+                HeroActionState.Hurt => hurtFrames,
+                _ => attackFrames
+            };
         }
 
         private static Sprite GetLoopFrame(Sprite[] frames, float framesPerSecond)
