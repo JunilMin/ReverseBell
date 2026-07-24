@@ -358,6 +358,13 @@ namespace ReverseBell.Tests
 
             Assert.That(game.IsFloorGateLocked(0), Is.True);
             Assert.That(game.GetEnemyCountOnFloor(48), Is.EqualTo(5));
+            for (int floorIndex = 0; floorIndex < 50; floorIndex++)
+            {
+                Assert.That(
+                    game.GetEnemyCountOnFloor(floorIndex),
+                    Is.InRange(1, 5),
+                    "Floor " + (floorIndex + 1) + " enemy population");
+            }
             GameObject firstGate = GameObject.Find("Combat Gate Floor 1");
             Assert.That(firstGate, Is.Not.Null);
             Assert.That(firstGate.transform.localScale.x, Is.LessThan(0.3f));
