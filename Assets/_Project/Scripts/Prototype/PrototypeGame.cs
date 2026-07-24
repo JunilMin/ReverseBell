@@ -38,6 +38,7 @@ namespace ReverseBell.Prototype
         public int ResonanceLevel => Mathf.Clamp(ResonancePoints / 3, 0, 4);
 
         public int EnemiesRemaining => enemies.Count;
+        public PlayerAvatar PlayerCharacter => player;
 
         public string Feedback { get; private set; } = "Wait for the enemy attack";
 
@@ -45,6 +46,8 @@ namespace ReverseBell.Prototype
         {
             Camera mainCamera = ConfigureCamera();
             CreateStage();
+            player.AttackRequested += PerformPlayerAttack;
+            player.SpecialRequested += TryPerformSpecial;
             mainCamera.GetComponent<VerticalCameraFollow>().Initialize(player.transform);
 
             rhythmClock = FindFirstObjectByType<RhythmClock>();
@@ -98,6 +101,97 @@ namespace ReverseBell.Prototype
             Score += 500;
             Feedback = enemy.WeaponType.ToString().ToUpperInvariant() + " GUARD DEFEATED";
             feedbackUntil = Time.time + 1.2f;
+        }
+
+        public bool PerformPlayerAttack(float facingDirection)
+        {
+            HumanoidMeleeEnemy target = FindClosestEnemy(
+                facingDirection,
+                1.65f,
+                1.3f,
+                true);
+            if (target == null)
+            {
+                Feedback = "SWORD MISS";
+                feedbackUntil = Time.time + 0.35f;
+                return false;
+            }
+
+            target.ReceivePlayerAttack(1);
+            Score += 50;
+            Feedback = "SWORD HIT";
+            feedbackUntil = Time.time + 0.45f;
+            return true;
+        }
+
+        public bool TryPerformSpecial(float facingDirection)
+        {
+            if (ResonanceLevel < 4)
+            {
+                Feedback = "SPECIAL NOT READY";
+                feedbackUntil = Time.time + 0.7f;
+                return false;
+            }
+
+            ResonancePoints = 0;
+            HumanoidMeleeEnemy[] targets = enemies.ToArray();
+            int hitCount = 0;
+            foreach (HumanoidMeleeEnemy enemy in targets)
+            {
+                if (enemy == null ||
+                    Vector2.Distance(player.transform.position, enemy.transform.position) > 4f)
+                {
+                    continue;
+                }
+
+                enemy.ReceivePlayerAttack(3);
+                hitCount++;
+            }
+
+            Score += hitCount * 150;
+            Feedback = hitCount > 0 ? "RESONANCE SLASH!" : "RESONANCE RELEASED";
+            feedbackUntil = Time.time + 1f;
+            return true;
+        }
+
+        public HumanoidMeleeEnemy GetEnemy(EnemyWeaponType type)
+        {
+            return enemies.Find(enemy => enemy != null && enemy.WeaponType == type);
+        }
+
+        private HumanoidMeleeEnemy FindClosestEnemy(
+            float facingDirection,
+            float horizontalRange,
+            float verticalRange,
+            bool requireFacing)
+        {
+            HumanoidMeleeEnemy closest = null;
+            float closestDistance = float.PositiveInfinity;
+
+            foreach (HumanoidMeleeEnemy enemy in enemies)
+            {
+                if (enemy == null)
+                {
+                    continue;
+                }
+
+                Vector2 difference = enemy.transform.position - player.transform.position;
+                if (Mathf.Abs(difference.x) > horizontalRange ||
+                    Mathf.Abs(difference.y) > verticalRange ||
+                    (requireFacing && difference.x * facingDirection <= 0f))
+                {
+                    continue;
+                }
+
+                float distance = difference.sqrMagnitude;
+                if (distance < closestDistance)
+                {
+                    closest = enemy;
+                    closestDistance = distance;
+                }
+            }
+
+            return closest;
         }
 
         public void TakeDamage()
@@ -347,7 +441,7 @@ namespace ReverseBell.Prototype
                 titleStyle);
             GUI.Label(
                 new Rect(26f, 62f, 650f, 90f),
-                "MOVE  A/D or ARROWS    JUMP  SPACE    PARRY  J/K\n" +
+                "MOVE  LEFT/RIGHT    JUMP  UP    ATTACK  Z    PARRY  X    SPECIAL  C\n" +
                 "CLIMB TO THE BELL AT THE TOP",
                 bodyStyle);
 
@@ -362,6 +456,7 @@ namespace ReverseBell.Prototype
                 "\nSCORE  " + Score +
                 "\nCOMBO  x" + Combo +
                 "\nRESONANCE  " + ResonanceLevel + " / 4" +
+                (ResonanceLevel >= 4 ? "  SPECIAL READY" : string.Empty) +
                 "\nENEMIES  " + EnemiesRemaining +
                 "\nFLOOR  " + floor + " / " + (PlatformCount + 1) +
                 "\nBEAT  " + beatText,
