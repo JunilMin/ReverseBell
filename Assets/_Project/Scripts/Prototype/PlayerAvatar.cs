@@ -18,7 +18,7 @@ namespace ReverseBell.Prototype
         private Rigidbody2D body;
         private SpriteRenderer parryRenderer;
         private HeroSwordsmanVisual characterVisual;
-        private Vector2 checkpoint = new Vector2(-4.8f, -2.8f);
+        private Vector2 checkpoint = new Vector2(-5.5f, -2.8f);
         private float parryStartedAt = float.NegativeInfinity;
         private float parryUntil;
         private float attackUntil;
