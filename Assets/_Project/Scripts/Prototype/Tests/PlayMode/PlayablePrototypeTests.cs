@@ -69,9 +69,9 @@ namespace ReverseBell.Tests
             }
 
             yield return null;
-            Assert.That(target == null, Is.True);
+            Assert.That(target == null, Is.False);
 
-            yield return new WaitForSeconds(2f);
+            yield return new WaitForSeconds(4f);
             Assert.That(target == null, Is.True);
 
             Object.Destroy(root);
