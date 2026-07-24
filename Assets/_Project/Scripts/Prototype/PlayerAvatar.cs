@@ -8,7 +8,7 @@ namespace ReverseBell.Prototype
     public sealed class PlayerAvatar : MonoBehaviour
     {
         private const float MoveSpeed = 6f;
-        private const float JumpSpeed = 13.5f;
+        private const float JumpSpeed = 9.5f;
         private const float StairClimbSpeed = 4.9f;
         private const float ParryDuration = 0.26f;
         private const float PerfectParryDuration = 0.11f;
@@ -40,8 +40,8 @@ namespace ReverseBell.Prototype
         private bool specialImpactQueued;
         private float hurtUntil;
         private StairClimbZone activeStair;
+        private StairClimbZone ignoredStair;
         private bool stairTraversalActive;
-        private float ignoreStairsUntil;
 
         public bool IsParrying => Time.time <= parryUntil;
         public float FacingDirection => facingDirection;
@@ -111,11 +111,23 @@ namespace ReverseBell.Prototype
             ResolveQueuedCombatImpacts();
 
             float movement = ReadMovement();
-            StairClimbZone stair = Time.time < ignoreStairsUntil
+            if (ignoredStair != null &&
+                !ignoredStair.TryGetStandingY(body.position, out _))
+            {
+                ignoredStair = null;
+            }
+
+            StairClimbZone stair = ignoredStair != null
                 ? null
                 : activeStair != null && activeStair.isActiveAndEnabled
                     ? activeStair
                     : StairClimbZone.FindAt(body.position);
+            if (stair != null &&
+                !stairTraversalActive &&
+                !stair.TryGetStandingY(body.position, out _))
+            {
+                stair = null;
+            }
             if (stair != null && Mathf.Abs(movement) <= 0.05f)
             {
                 if (IsStairUpHeld())
@@ -151,7 +163,7 @@ namespace ReverseBell.Prototype
                     {
                         stairTraversalActive = false;
                         activeStair = null;
-                        ignoreStairsUntil = Time.time + 0.25f;
+                        ignoredStair = stair;
                         body.bodyType = RigidbodyType2D.Dynamic;
                     }
                 }
@@ -220,7 +232,7 @@ namespace ReverseBell.Prototype
         {
             stairTraversalActive = false;
             activeStair = null;
-            ignoreStairsUntil = Time.time + 0.1f;
+            ignoredStair = null;
             body.bodyType = RigidbodyType2D.Dynamic;
             transform.position = new Vector3(position.x, position.y, 0f);
             body.linearVelocity = Vector2.zero;
