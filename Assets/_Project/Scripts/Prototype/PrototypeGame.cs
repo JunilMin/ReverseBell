@@ -858,18 +858,20 @@ namespace ReverseBell.Prototype
                 float y = PlatformY(index);
                 float x = platformXPattern[index % platformXPattern.Length];
 
+                CreateCastleChamber(index, y);
+
                 GameObject platform = CreateBlock(
                     "Floor " + (index + 1) + " Walkway",
-                    new Vector2(-2.7f, y),
-                    new Vector2(9.4f, 0.42f),
+                    new Vector2(-2.4f, y),
+                    new Vector2(9f, 0.48f),
                     PlatformColor,
                     true);
                 ParentToFloorSection(platform, index);
 
                 GameObject stairLanding = CreateOneWayLanding(
                     "Floor " + (index + 1) + " Stair Landing",
-                    new Vector2(4.45f, y),
-                    new Vector2(5.1f, 0.32f),
+                    new Vector2(4.55f, y),
+                    new Vector2(5.1f, 0.38f),
                     Color.Lerp(PlatformColor, AccentColor, 0.18f));
                 ParentToFloorSection(stairLanding, index);
 
@@ -914,6 +916,54 @@ namespace ReverseBell.Prototype
             ParentToFloorSection(bellChamberFloor, PlatformCount - 1);
         }
 
+        private void CreateCastleChamber(int floorIndex, float floorY)
+        {
+            Color wallColor = new Color(0.075f, 0.085f, 0.13f);
+            Color masonryColor = new Color(0.16f, 0.17f, 0.23f);
+
+            GameObject backdrop = CreateVisualBlock(
+                "Floor " + (floorIndex + 1) + " Stone Chamber",
+                new Vector2(0f, floorY + (PlatformSpacing * 0.5f)),
+                new Vector2(13.6f, PlatformSpacing - 0.12f),
+                wallColor);
+            backdrop.GetComponent<SpriteRenderer>().sortingOrder = -8;
+            ParentToFloorSection(backdrop, floorIndex);
+
+            GameObject leftPillar = CreateVisualBlock(
+                "Floor " + (floorIndex + 1) + " Left Pillar",
+                new Vector2(-6.55f, floorY + 2.25f),
+                new Vector2(0.42f, 4.45f),
+                masonryColor);
+            GameObject stairPillar = CreateVisualBlock(
+                "Floor " + (floorIndex + 1) + " Stairwell Pillar",
+                new Vector2(1.82f, floorY + 2.55f),
+                new Vector2(0.32f, 3.45f),
+                masonryColor);
+            GameObject ceilingBeam = CreateVisualBlock(
+                "Floor " + (floorIndex + 1) + " Ceiling Beam",
+                new Vector2(0f, floorY + PlatformSpacing - 0.18f),
+                new Vector2(13.6f, 0.36f),
+                masonryColor);
+            leftPillar.GetComponent<SpriteRenderer>().sortingOrder = -2;
+            stairPillar.GetComponent<SpriteRenderer>().sortingOrder = -2;
+            ceilingBeam.GetComponent<SpriteRenderer>().sortingOrder = -2;
+            ParentToFloorSection(leftPillar, floorIndex);
+            ParentToFloorSection(stairPillar, floorIndex);
+            ParentToFloorSection(ceilingBeam, floorIndex);
+
+            for (int brick = 0; brick < 5; brick++)
+            {
+                float brickX = -5.3f + (brick * 1.55f);
+                GameObject stone = CreateVisualBlock(
+                    "Floor " + (floorIndex + 1) + " Wall Stone " + (brick + 1),
+                    new Vector2(brickX, floorY + 3.65f),
+                    new Vector2(1.18f, 0.18f),
+                    new Color(0.22f, 0.23f, 0.29f));
+                stone.GetComponent<SpriteRenderer>().sortingOrder = -3;
+                ParentToFloorSection(stone, floorIndex);
+            }
+        }
+
         private void CreateEntryStairs()
         {
             CreateStairFlight(
@@ -930,8 +980,8 @@ namespace ReverseBell.Prototype
             string customName = null)
         {
             const int StepCount = 11;
-            const float StartX = 1.75f;
-            const float EndX = 6.95f;
+            const float StartX = 2.15f;
+            const float EndX = 6.65f;
             string stairName = customName ?? "Stairs " + (floorIndex + 1) + " to " + (floorIndex + 2);
 
             var ramp = new GameObject(stairName + " Ramp");
@@ -963,7 +1013,10 @@ namespace ReverseBell.Prototype
             var climbTrigger = climbZone.AddComponent<BoxCollider2D>();
             climbTrigger.size = new Vector2(length, 1.25f);
             climbTrigger.isTrigger = true;
-            climbZone.AddComponent<StairClimbZone>();
+            StairClimbZone stairZone = climbZone.AddComponent<StairClimbZone>();
+            stairZone.Configure(
+                new Vector2(StartX, startY),
+                new Vector2(EndX, endY));
             ParentToFloorSection(climbZone, floorIndex);
 
             Color stairColor = Color.Lerp(PlatformColor, AccentColor, 0.28f);
