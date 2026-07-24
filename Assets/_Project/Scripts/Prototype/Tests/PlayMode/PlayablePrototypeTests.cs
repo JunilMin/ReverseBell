@@ -100,5 +100,50 @@ namespace ReverseBell.Tests
 
             Object.Destroy(root);
         }
+
+        [UnityTest]
+        public IEnumerator SwordAttack_HitsOnlyEnemyInFacingDirection()
+        {
+            var root = new GameObject("Sword Attack Test Root");
+            var game = root.AddComponent<PrototypeGame>();
+            yield return null;
+
+            HumanoidMeleeEnemy shield = game.GetEnemy(EnemyWeaponType.Shield);
+            shield.transform.position =
+                game.PlayerCharacter.transform.position + Vector3.right;
+            int startingHealth = shield.Health;
+
+            Assert.That(game.PerformPlayerAttack(1f), Is.True);
+            Assert.That(shield.Health, Is.EqualTo(startingHealth - 1));
+            Assert.That(game.PerformPlayerAttack(-1f), Is.False);
+
+            Object.Destroy(root);
+        }
+
+        [UnityTest]
+        public IEnumerator Special_RequiresAndConsumesFullResonance()
+        {
+            var root = new GameObject("Special Attack Test Root");
+            var game = root.AddComponent<PrototypeGame>();
+            yield return null;
+
+            Assert.That(game.TryPerformSpecial(1f), Is.False);
+
+            for (int index = 0; index < 6; index++)
+            {
+                game.RegisterParry(ParryGrade.Perfect);
+            }
+
+            HumanoidMeleeEnemy shield = game.GetEnemy(EnemyWeaponType.Shield);
+            shield.transform.position =
+                game.PlayerCharacter.transform.position + Vector3.right;
+            int startingHealth = shield.Health;
+
+            Assert.That(game.TryPerformSpecial(1f), Is.True);
+            Assert.That(game.ResonancePoints, Is.Zero);
+            Assert.That(shield.Health, Is.EqualTo(startingHealth - 3));
+
+            Object.Destroy(root);
+        }
     }
 }

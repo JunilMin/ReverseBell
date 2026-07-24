@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -9,6 +10,10 @@ namespace ReverseBell.Prototype
         private const float MoveSpeed = 6f;
         private const float JumpSpeed = 12.5f;
         private const float ParryDuration = 0.18f;
+        private const float AttackDuration = 0.28f;
+        private const float SpecialDuration = 0.45f;
+        private const float AttackCooldown = 0.32f;
+        private const float SpecialCooldown = 0.7f;
 
         private Rigidbody2D body;
         private SpriteRenderer parryRenderer;
@@ -16,8 +21,19 @@ namespace ReverseBell.Prototype
         private Vector2 checkpoint = new Vector2(-4.8f, -2.8f);
         private float parryStartedAt = float.NegativeInfinity;
         private float parryUntil;
+        private float attackUntil;
+        private float specialUntil;
+        private float nextAttackAt;
+        private float nextSpecialAt;
+        private float facingDirection = 1f;
 
         public bool IsParrying => Time.time <= parryUntil;
+        public float FacingDirection => facingDirection;
+        public bool IsSwordAction =>
+            IsParrying || Time.time <= attackUntil || Time.time <= specialUntil;
+
+        public event Action<float> AttackRequested;
+        public event Action<float> SpecialRequested;
 
         private void Awake()
         {
@@ -41,11 +57,23 @@ namespace ReverseBell.Prototype
         private void Update()
         {
             float movement = ReadMovement();
+            if (Mathf.Abs(movement) > 0.05f)
+            {
+                facingDirection = Mathf.Sign(movement);
+            }
+
             body.linearVelocity = new Vector2(movement * MoveSpeed, body.linearVelocity.y);
 
             if (WasJumpPressed() && IsGrounded())
             {
                 body.linearVelocity = new Vector2(body.linearVelocity.x, JumpSpeed);
+            }
+
+            if (WasAttackPressed() && Time.time >= nextAttackAt)
+            {
+                attackUntil = Time.time + AttackDuration;
+                nextAttackAt = Time.time + AttackCooldown;
+                AttackRequested?.Invoke(facingDirection);
             }
 
             if (WasParryPressed())
@@ -54,8 +82,15 @@ namespace ReverseBell.Prototype
                 parryUntil = Time.time + ParryDuration;
             }
 
+            if (WasSpecialPressed() && Time.time >= nextSpecialAt)
+            {
+                specialUntil = Time.time + SpecialDuration;
+                nextSpecialAt = Time.time + SpecialCooldown;
+                SpecialRequested?.Invoke(facingDirection);
+            }
+
             parryRenderer.enabled = IsParrying;
-            characterVisual.SetPose(movement, body.linearVelocity.y, IsGrounded(), IsParrying);
+            characterVisual.SetPose(movement, body.linearVelocity.y, IsGrounded(), IsSwordAction);
         }
 
         public void ResetPosition()
@@ -92,23 +127,14 @@ namespace ReverseBell.Prototype
 
             if (Keyboard.current != null)
             {
-                if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed)
+                if (Keyboard.current.leftArrowKey.isPressed)
                 {
                     value -= 1f;
                 }
 
-                if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed)
+                if (Keyboard.current.rightArrowKey.isPressed)
                 {
                     value += 1f;
-                }
-            }
-
-            if (Gamepad.current != null)
-            {
-                float stick = Gamepad.current.leftStick.x.ReadValue();
-                if (Mathf.Abs(stick) > Mathf.Abs(value))
-                {
-                    value = stick;
                 }
             }
 
@@ -117,23 +143,26 @@ namespace ReverseBell.Prototype
 
         private static bool WasJumpPressed()
         {
-            bool keyboard = Keyboard.current != null &&
-                (Keyboard.current.spaceKey.wasPressedThisFrame ||
-                 Keyboard.current.wKey.wasPressedThisFrame ||
-                 Keyboard.current.upArrowKey.wasPressedThisFrame);
-            bool gamepad = Gamepad.current != null &&
-                Gamepad.current.buttonSouth.wasPressedThisFrame;
-            return keyboard || gamepad;
+            return Keyboard.current != null &&
+                Keyboard.current.upArrowKey.wasPressedThisFrame;
+        }
+
+        private static bool WasAttackPressed()
+        {
+            return Keyboard.current != null &&
+                Keyboard.current.zKey.wasPressedThisFrame;
         }
 
         private static bool WasParryPressed()
         {
-            bool keyboard = Keyboard.current != null &&
-                (Keyboard.current.jKey.wasPressedThisFrame ||
-                 Keyboard.current.kKey.wasPressedThisFrame);
-            bool gamepad = Gamepad.current != null &&
-                Gamepad.current.buttonWest.wasPressedThisFrame;
-            return keyboard || gamepad;
+            return Keyboard.current != null &&
+                Keyboard.current.xKey.wasPressedThisFrame;
+        }
+
+        private static bool WasSpecialPressed()
+        {
+            return Keyboard.current != null &&
+                Keyboard.current.cKey.wasPressedThisFrame;
         }
     }
 }

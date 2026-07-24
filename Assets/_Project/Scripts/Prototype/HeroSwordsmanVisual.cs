@@ -15,8 +15,8 @@ namespace ReverseBell.Prototype
         private Sprite[] jumpFrames;
         private Sprite[] attackFrames;
         private float facing = 1f;
-        private float parryAnimationStartedAt;
-        private bool wasParrying;
+        private float swordAnimationStartedAt;
+        private bool wasUsingSword;
 
         public bool FacesRight => characterRenderer != null && characterRenderer.flipX;
 
@@ -50,7 +50,7 @@ namespace ReverseBell.Prototype
             characterRenderer.sprite = idleFrames[0];
         }
 
-        public void SetPose(float movement, float verticalVelocity, bool isGrounded, bool isParrying)
+        public void SetPose(float movement, float verticalVelocity, bool isGrounded, bool isUsingSword)
         {
             if (Mathf.Abs(movement) > 0.05f)
             {
@@ -59,23 +59,23 @@ namespace ReverseBell.Prototype
 
             characterRenderer.flipX = facing > 0f;
 
-            if (isParrying)
+            if (isUsingSword)
             {
-                if (!wasParrying)
+                if (!wasUsingSword)
                 {
-                    parryAnimationStartedAt = Time.time;
+                    swordAnimationStartedAt = Time.time;
                 }
 
-                float elapsed = Time.time - parryAnimationStartedAt;
+                float elapsed = Time.time - swordAnimationStartedAt;
                 int attackIndex = Mathf.Min(
                     Mathf.FloorToInt(elapsed * AttackFramesPerSecond),
                     attackFrames.Length - 1);
                 characterRenderer.sprite = attackFrames[attackIndex];
-                wasParrying = true;
+                wasUsingSword = true;
                 return;
             }
 
-            wasParrying = false;
+            wasUsingSword = false;
 
             if (!isGrounded)
             {

@@ -153,6 +153,21 @@ namespace ReverseBell.Prototype
             }
 
             int damage = game.RegisterParry(grade);
+            ApplyDamage(damage);
+        }
+
+        public void ReceivePlayerAttack(int damage)
+        {
+            if (defeated || damage <= 0)
+            {
+                return;
+            }
+
+            ApplyDamage(damage);
+        }
+
+        private void ApplyDamage(int damage)
+        {
             Health = Mathf.Max(0, Health - damage);
 
             if (Health > 0)
