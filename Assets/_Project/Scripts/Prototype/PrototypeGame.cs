@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ReverseBell.Core;
 using UnityEngine;
 
@@ -16,7 +17,7 @@ namespace ReverseBell.Prototype
         private readonly float[] platformXPattern = { -4.2f, 0f, 4.2f, 0f };
 
         private PlayerAvatar player;
-        private EnemyRhythmAttacker enemy;
+        private readonly List<HumanoidMeleeEnemy> enemies = new List<HumanoidMeleeEnemy>();
         private RhythmClock rhythmClock;
         private Transform towerBell;
         private GUIStyle titleStyle;
@@ -36,6 +37,8 @@ namespace ReverseBell.Prototype
 
         public int ResonanceLevel => Mathf.Clamp(ResonancePoints / 3, 0, 4);
 
+        public int EnemiesRemaining => enemies.Count;
+
         public string Feedback { get; private set; } = "Wait for the enemy attack";
 
         private void Awake()
@@ -45,7 +48,16 @@ namespace ReverseBell.Prototype
             mainCamera.GetComponent<VerticalCameraFollow>().Initialize(player.transform);
 
             rhythmClock = FindFirstObjectByType<RhythmClock>();
-            enemy.Initialize(this, player, rhythmClock);
+            foreach (HumanoidMeleeEnemy enemy in enemies)
+            {
+                enemy.Initialize(
+                    this,
+                    player,
+                    rhythmClock,
+                    enemy.WeaponType,
+                    enemy.transform.position.x - 1.8f,
+                    enemy.transform.position.x + 1.8f);
+            }
         }
 
         private void Update()
@@ -80,10 +92,11 @@ namespace ReverseBell.Prototype
             return isPerfect && ResonanceLevel >= 4 ? 2 : 1;
         }
 
-        public void RegisterEnemyDefeat(int wave)
+        public void RegisterEnemyDefeat(HumanoidMeleeEnemy enemy)
         {
-            Score += 500 * wave;
-            Feedback = "ENEMY BREAK - WAVE " + (wave + 1);
+            enemies.Remove(enemy);
+            Score += 500;
+            Feedback = enemy.WeaponType.ToString().ToUpperInvariant() + " GUARD DEFEATED";
             feedbackUntil = Time.time + 1.2f;
         }
 
@@ -151,29 +164,37 @@ namespace ReverseBell.Prototype
             CreateTowerPlatforms();
             CreateTowerDecorations();
 
-            GameObject playerObject = CreateBlock(
-                "Player",
-                new Vector2(-4.8f, -2.8f),
-                new Vector2(0.8f, 1.4f),
-                new Color(0.2f, 0.75f, 1f),
-                false);
-            playerObject.transform.localScale = Vector3.one;
-            playerObject.GetComponent<BoxCollider2D>().size = new Vector2(0.8f, 1.4f);
-            player = playerObject.AddComponent<PlayerAvatar>();
-
-            GameObject enemyObject = CreateBlock(
-                "Enemy",
-                new Vector2(4.8f, -2.8f),
-                new Vector2(0.9f, 1.5f),
-                new Color(0.95f, 0.2f, 0.28f),
-                true);
-            enemy = enemyObject.AddComponent<EnemyRhythmAttacker>();
+            player = CreatePlayer(new Vector2(-4.8f, -2.8f));
+            CreateEnemy("Sword Guard", new Vector2(4.2f, -2.8f), EnemyWeaponType.Sword);
+            CreateEnemy("Spear Guard", new Vector2(-4.2f, 7.4f), EnemyWeaponType.Spear);
+            CreateEnemy("Shield Guard", new Vector2(-4.2f, 15.6f), EnemyWeaponType.Shield);
 
             towerBell = CreateVisualBlock(
                 "Tower Bell",
                 new Vector2(0f, TowerTop + 1.2f),
                 new Vector2(1.4f, 1.8f),
                 new Color(1f, 0.72f, 0.16f)).transform;
+        }
+
+        private static PlayerAvatar CreatePlayer(Vector2 position)
+        {
+            var playerObject = new GameObject("Player");
+            playerObject.transform.position = position;
+            playerObject.AddComponent<SpriteRenderer>();
+
+            var collider = playerObject.AddComponent<BoxCollider2D>();
+            collider.size = new Vector2(0.8f, 1.4f);
+
+            return playerObject.AddComponent<PlayerAvatar>();
+        }
+
+        private void CreateEnemy(string enemyName, Vector2 position, EnemyWeaponType weaponType)
+        {
+            var enemyObject = new GameObject(enemyName);
+            enemyObject.transform.position = position;
+            var enemy = enemyObject.AddComponent<HumanoidMeleeEnemy>();
+            enemy.SetWeaponType(weaponType);
+            enemies.Add(enemy);
         }
 
         private void CreateTowerPlatforms()
@@ -341,7 +362,7 @@ namespace ReverseBell.Prototype
                 "\nSCORE  " + Score +
                 "\nCOMBO  x" + Combo +
                 "\nRESONANCE  " + ResonanceLevel + " / 4" +
-                "\nENEMY  " + enemy.Health + " / " + enemy.MaxHealth +
+                "\nENEMIES  " + EnemiesRemaining +
                 "\nFLOOR  " + floor + " / " + (PlatformCount + 1) +
                 "\nBEAT  " + beatText,
                 bodyStyle);
