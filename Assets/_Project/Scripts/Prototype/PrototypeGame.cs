@@ -49,6 +49,7 @@ namespace ReverseBell.Prototype
         private float damageInvulnerableUntil;
         private Transform finalBossPortal;
         private bool skillMenuOpen;
+        private bool skillMenuAllowsUnlock;
         private bool finalBossSpawned;
         private TowerSkillId equippedActiveSkill = TowerSkillId.ResonanceSlash;
 
@@ -129,6 +130,13 @@ namespace ReverseBell.Prototype
                 {
                     CloseSkillMenu();
                 }
+                return;
+            }
+
+            if (Keyboard.current != null &&
+                Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                OpenSkillMenu(false);
                 return;
             }
 
@@ -734,7 +742,7 @@ namespace ReverseBell.Prototype
                 }
 
                 ActivateCheckpoint(shrine.Key);
-                OpenSkillMenu();
+                OpenSkillMenu(true);
                 return;
             }
 
@@ -749,11 +757,12 @@ namespace ReverseBell.Prototype
             feedbackUntil = Time.time + 0.5f;
         }
 
-        private void OpenSkillMenu()
+        private void OpenSkillMenu(bool allowUnlock)
         {
             skillMenuOpen = true;
+            skillMenuAllowsUnlock = allowUnlock;
             Time.timeScale = 0f;
-            Feedback = "SKILL ALTAR";
+            Feedback = allowUnlock ? "SKILL ALTAR" : "SKILL LOADOUT";
         }
 
         private void CloseSkillMenu()
@@ -1308,11 +1317,16 @@ namespace ReverseBell.Prototype
             GUI.Box(new Rect(0f, 0f, Screen.width, Screen.height), GUIContent.none);
             GUI.Label(
                 new Rect((Screen.width * 0.5f) - 260f, 24f, 520f, 42f),
-                "BELL ALTAR - CHOOSE YOUR SKILLS",
+                skillMenuAllowsUnlock
+                    ? "BELL ALTAR - UNLOCK AND EQUIP SKILLS"
+                    : "PAUSED - SKILL LOADOUT",
                 centerStyle);
             GUI.Label(
                 new Rect((Screen.width * 0.5f) - 260f, 65f, 520f, 32f),
-                "SKILL POINTS: " + SkillPoints + "    E / ESC: CLOSE",
+                "SKILL POINTS: " + SkillPoints +
+                (skillMenuAllowsUnlock
+                    ? "    E / ESC: CLOSE"
+                    : "    ESC: RESUME    (UNLOCK AT 10F ALTARS)"),
                 centerStyle);
 
             TowerSkillId[] passiveSkills =
@@ -1354,13 +1368,15 @@ namespace ReverseBell.Prototype
                 "PASSIVE SKILLS",
                 passiveSkills,
                 passiveNames,
-                false);
+                false,
+                skillMenuAllowsUnlock);
             DrawSkillColumn(
                 new Rect((Screen.width * 0.5f) + 30f, 110f, 440f, 390f),
                 "ACTIVE SKILLS - ONLY ONE EQUIPPED TO C",
                 activeSkills,
                 activeNames,
-                true);
+                true,
+                skillMenuAllowsUnlock);
         }
 
         private void DrawSkillColumn(
@@ -1368,7 +1384,8 @@ namespace ReverseBell.Prototype
             string heading,
             TowerSkillId[] skills,
             string[] names,
-            bool active)
+            bool active,
+            bool allowUnlock)
         {
             GUI.Box(area, GUIContent.none);
             GUI.Label(new Rect(area.x + 15f, area.y + 12f, area.width - 30f, 30f), heading, titleStyle);
@@ -1377,7 +1394,11 @@ namespace ReverseBell.Prototype
                 TowerSkillId skill = skills[index];
                 bool unlocked = IsSkillUnlocked(skill);
                 bool equipped = active && equippedActiveSkill == skill;
-                string state = equipped ? " [EQUIPPED]" : unlocked ? " [UNLOCKED]" : " [1 POINT]";
+                string state = equipped
+                    ? " [EQUIPPED]"
+                    : unlocked
+                        ? active ? " [SELECT]" : " [UNLOCKED]"
+                        : allowUnlock ? " [1 POINT]" : " [LOCKED - ALTAR]";
                 Rect buttonRect = new Rect(
                     area.x + 18f,
                     area.y + 58f + (index * 58f),
@@ -1385,7 +1406,10 @@ namespace ReverseBell.Prototype
                     44f);
                 if (GUI.Button(buttonRect, names[index] + state))
                 {
-                    UnlockOrEquipSkill(skill);
+                    if (unlocked || allowUnlock)
+                    {
+                        UnlockOrEquipSkill(skill);
+                    }
                 }
             }
         }

@@ -42,6 +42,7 @@ namespace ReverseBell.Prototype
         private StairClimbZone activeStair;
         private StairClimbZone ignoredStair;
         private bool stairTraversalActive;
+        private float stairTraversalVelocity;
 
         public bool IsParrying => Time.time <= parryUntil;
         public float FacingDirection => facingDirection;
@@ -137,6 +138,7 @@ namespace ReverseBell.Prototype
                 activeStair = null;
                 ignoredStair = stair;
                 stair = null;
+                stairTraversalVelocity = 0f;
                 body.bodyType = RigidbodyType2D.Dynamic;
             }
 
@@ -152,12 +154,17 @@ namespace ReverseBell.Prototype
                 body.bodyType = RigidbodyType2D.Kinematic;
                 body.linearVelocity = Vector2.zero;
 
-                if (Mathf.Abs(movement) > 0.05f)
+                float targetStairVelocity = movement * StairClimbSpeed;
+                stairTraversalVelocity = Mathf.MoveTowards(
+                    stairTraversalVelocity,
+                    targetStairVelocity,
+                    18f * Time.deltaTime);
+                if (Mathf.Abs(stairTraversalVelocity) > 0.02f)
                 {
                     body.position = stair.MoveAlong(
                         body.position,
-                        movement,
-                        MoveSpeed * Time.deltaTime,
+                        stairTraversalVelocity,
+                        Mathf.Abs(stairTraversalVelocity) * Time.deltaTime,
                         out bool completed);
                     if (completed)
                     {
@@ -165,11 +172,19 @@ namespace ReverseBell.Prototype
                         activeStair = null;
                         ignoredStair = stair;
                         body.bodyType = RigidbodyType2D.Dynamic;
+                        body.linearVelocity = new Vector2(
+                            Mathf.Sign(stairTraversalVelocity) * MoveSpeed * 0.7f,
+                            0f);
+                        stairTraversalVelocity = 0f;
                     }
                 }
             }
             else
             {
+                stairTraversalVelocity = Mathf.MoveTowards(
+                    stairTraversalVelocity,
+                    0f,
+                    24f * Time.deltaTime);
                 if (body.bodyType != RigidbodyType2D.Dynamic)
                 {
                     body.bodyType = RigidbodyType2D.Dynamic;
@@ -231,6 +246,7 @@ namespace ReverseBell.Prototype
         public void RespawnAt(Vector2 position)
         {
             stairTraversalActive = false;
+            stairTraversalVelocity = 0f;
             activeStair = null;
             ignoredStair = null;
             body.bodyType = RigidbodyType2D.Dynamic;

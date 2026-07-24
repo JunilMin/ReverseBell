@@ -39,13 +39,23 @@ namespace ReverseBell.Prototype
                 return;
             }
 
-            int volleyCount = Mathf.Clamp(1 + (floor / 18), 1, 3);
+            int volleyCount = GetVolleyCountForFloor(floor);
             for (int volleyIndex = 0; volleyIndex < volleyCount; volleyIndex++)
             {
                 SpawnHazard(floor, volleyIndex);
             }
-            float difficulty = Mathf.InverseLerp(6f, 50f, floor);
-            nextSpawnAt = Time.time + Mathf.Lerp(3.4f, 1.25f, difficulty);
+            nextSpawnAt = Time.time + GetSpawnIntervalForFloor(floor);
+        }
+
+        public static int GetVolleyCountForFloor(int floor)
+        {
+            return Mathf.Clamp(1 + ((Mathf.Max(1, floor) - 1) / 10), 1, 5);
+        }
+
+        public static float GetSpawnIntervalForFloor(int floor)
+        {
+            float difficulty = Mathf.InverseLerp(6f, 50f, Mathf.Max(1, floor));
+            return Mathf.Lerp(3.2f, 0.8f, difficulty);
         }
 
         private void SpawnHazard(int floor, int volleyIndex)

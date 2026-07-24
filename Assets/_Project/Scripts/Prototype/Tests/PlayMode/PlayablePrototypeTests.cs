@@ -331,7 +331,36 @@ namespace ReverseBell.Tests
             Assert.That(game.EquippedActiveSkill, Is.EqualTo(TowerSkillId.ResonanceSlash));
             Assert.That(game.IsSkillUnlocked(TowerSkillId.ResonanceSlash), Is.True);
 
+            HumanoidMeleeEnemy[] allEnemies =
+                Resources.FindObjectsOfTypeAll<HumanoidMeleeEnemy>();
+            foreach (HumanoidMeleeEnemy enemy in allEnemies)
+            {
+                if (enemy != null &&
+                    enemy.IsBoss &&
+                    (enemy.FloorIndex == 9 || enemy.FloorIndex == 19))
+                {
+                    enemy.ReceivePlayerAttack(enemy.MaxHealth);
+                }
+            }
+
+            Assert.That(game.UnlockOrEquipSkill(TowerSkillId.HealingBell), Is.True);
+            Assert.That(game.EquippedActiveSkill, Is.EqualTo(TowerSkillId.HealingBell));
+            Assert.That(game.UnlockOrEquipSkill(TowerSkillId.DemonBreaker), Is.True);
+            Assert.That(game.EquippedActiveSkill, Is.EqualTo(TowerSkillId.DemonBreaker));
+            Assert.That(game.IsSkillUnlocked(TowerSkillId.HealingBell), Is.True);
+
             Object.Destroy(root);
+        }
+
+        [Test]
+        public void HazardDensity_IncreasesWithTowerFloor()
+        {
+            Assert.That(TowerHazardDirector.GetVolleyCountForFloor(6), Is.EqualTo(1));
+            Assert.That(TowerHazardDirector.GetVolleyCountForFloor(25), Is.EqualTo(3));
+            Assert.That(TowerHazardDirector.GetVolleyCountForFloor(50), Is.EqualTo(5));
+            Assert.That(
+                TowerHazardDirector.GetSpawnIntervalForFloor(50),
+                Is.LessThan(TowerHazardDirector.GetSpawnIntervalForFloor(6)));
         }
 
         [UnityTest]
