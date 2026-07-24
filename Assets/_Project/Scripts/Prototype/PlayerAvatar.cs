@@ -128,16 +128,16 @@ namespace ReverseBell.Prototype
             {
                 stair = null;
             }
-            if (stair != null && Mathf.Abs(movement) <= 0.05f)
+
+            bool jumpPressed = WasJumpPressed();
+            bool jumpedFromStair = jumpPressed && stair != null;
+            if (jumpedFromStair)
             {
-                if (IsStairUpHeld())
-                {
-                    movement = stair.RiseDirection;
-                }
-                else if (IsStairDownHeld())
-                {
-                    movement = -stair.RiseDirection;
-                }
+                stairTraversalActive = false;
+                activeStair = null;
+                ignoredStair = stair;
+                stair = null;
+                body.bodyType = RigidbodyType2D.Dynamic;
             }
 
             if (Mathf.Abs(movement) > 0.05f)
@@ -178,7 +178,7 @@ namespace ReverseBell.Prototype
                 body.linearVelocity = new Vector2(movement * MoveSpeed, body.linearVelocity.y);
             }
 
-            if (stair == null && WasJumpPressed() && IsGrounded())
+            if (jumpPressed && (jumpedFromStair || IsGrounded()))
             {
                 body.linearVelocity = new Vector2(body.linearVelocity.x, JumpSpeed);
             }
@@ -368,18 +368,6 @@ namespace ReverseBell.Prototype
         {
             return Keyboard.current != null &&
                 Keyboard.current.upArrowKey.wasPressedThisFrame;
-        }
-
-        private static bool IsStairUpHeld()
-        {
-            return Keyboard.current != null &&
-                Keyboard.current.upArrowKey.isPressed;
-        }
-
-        private static bool IsStairDownHeld()
-        {
-            return Keyboard.current != null &&
-                Keyboard.current.downArrowKey.isPressed;
         }
 
         private static bool WasAttackPressed()

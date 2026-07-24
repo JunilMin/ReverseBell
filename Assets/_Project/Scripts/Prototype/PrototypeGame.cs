@@ -616,12 +616,26 @@ namespace ReverseBell.Prototype
 
         private void CreateUpperTowerEnemies()
         {
-            for (int floorIndex = 12; floorIndex < PlatformCount; floorIndex += 4)
+            int[] bossFloors = { 9, 19, 29, 39 };
+            for (int floorIndex = 0; floorIndex < PlatformCount; floorIndex++)
             {
-                int enemyCount = Mathf.Clamp(1 + (floorIndex / 12), 1, 5);
+                int targetEnemyCount = Mathf.Clamp(1 + (floorIndex / 12), 1, 5);
+                bool isBossFloor = System.Array.IndexOf(bossFloors, floorIndex) >= 0;
+                if (isBossFloor)
+                {
+                    targetEnemyCount = Mathf.Max(0, targetEnemyCount - 1);
+                }
+
+                int existingCount = enemiesByFloor.TryGetValue(
+                    floorIndex,
+                    out List<HumanoidMeleeEnemy> existingEnemies)
+                    ? existingEnemies.Count
+                    : 0;
                 float platformX = platformXPattern[floorIndex % platformXPattern.Length];
 
-                for (int enemyIndex = 0; enemyIndex < enemyCount; enemyIndex++)
+                for (int enemyIndex = existingCount;
+                    enemyIndex < targetEnemyCount;
+                    enemyIndex++)
                 {
                     EnemyWeaponType type = ((floorIndex / 4 + enemyIndex) % 3) switch
                     {
@@ -629,7 +643,8 @@ namespace ReverseBell.Prototype
                         1 => EnemyWeaponType.Spear,
                         _ => EnemyWeaponType.Shield
                     };
-                    float offset = (enemyIndex - ((enemyCount - 1) * 0.5f)) * 0.75f;
+                    float offset =
+                        (enemyIndex - ((targetEnemyCount - 1) * 0.5f)) * 0.75f;
                     CreateEnemy(
                         type + " Guard Floor " + (floorIndex + 1) + " #" + (enemyIndex + 1),
                         new Vector2(
