@@ -26,10 +26,16 @@ namespace ReverseBell.Prototype
 
         public EnemyWeaponType WeaponType => weaponType;
         public bool IsStunned => Time.time < stunnedUntil;
+        public int FloorIndex { get; private set; }
 
         public void SetWeaponType(EnemyWeaponType type)
         {
             weaponType = type;
+        }
+
+        public void SetFloorIndex(int floorIndex)
+        {
+            FloorIndex = floorIndex;
         }
 
         public void Initialize(
@@ -150,7 +156,7 @@ namespace ReverseBell.Prototype
                 return;
             }
 
-            ParryGrade grade = player.EvaluateParry();
+            ParryGrade grade = player.ConsumeParry();
             if (grade == ParryGrade.None)
             {
                 game.TakeDamage(attackDamage);

@@ -53,12 +53,12 @@ namespace ReverseBell.Prototype
                 1,
                 6,
                 44f);
-            parryFrames = CreateFrames(
-                Resources.Load<Texture2D>("HeroSwordsman/Slide"),
-                2,
-                2,
-                4,
-                48f);
+            parryFrames = CreateSelectedFrames(
+                Resources.Load<Texture2D>("HeroSwordsman/Attack"),
+                6,
+                1,
+                new[] { 0, 0, 4 },
+                52f);
             specialFrames = CreateFrames(
                 Resources.Load<Texture2D>("HeroSwordsman/JumpAttack"),
                 6,
@@ -180,6 +180,29 @@ namespace ReverseBell.Prototype
             }
 
             return frames;
+        }
+
+        private static Sprite[] CreateSelectedFrames(
+            Texture2D texture,
+            int columns,
+            int rows,
+            int[] selectedIndices,
+            float pixelsPerUnit)
+        {
+            Sprite[] allFrames = CreateFrames(
+                texture,
+                columns,
+                rows,
+                columns * rows,
+                pixelsPerUnit);
+            var selectedFrames = new Sprite[selectedIndices.Length];
+
+            for (int index = 0; index < selectedIndices.Length; index++)
+            {
+                selectedFrames[index] = allFrames[selectedIndices[index]];
+            }
+
+            return selectedFrames;
         }
     }
 }

@@ -202,5 +202,84 @@ namespace ReverseBell.Tests
 
             Object.Destroy(root);
         }
+
+        [UnityTest]
+        public IEnumerator Parry_CannotBeMaintainedByRepeatedInput()
+        {
+            var root = new GameObject("Parry Cooldown Test Root");
+            var game = root.AddComponent<PrototypeGame>();
+            yield return null;
+
+            PlayerAvatar player = game.PlayerCharacter;
+            Assert.That(player.TryStartParry(), Is.True);
+            Assert.That(player.TryStartParry(), Is.False);
+            Assert.That(player.ParryCooldownRemaining, Is.GreaterThan(0.6f));
+
+            yield return new WaitForSeconds(0.14f);
+            Assert.That(player.EvaluateParry(), Is.EqualTo(ParryGrade.None));
+            Assert.That(player.TryStartParry(), Is.False);
+
+            Object.Destroy(root);
+        }
+
+        [UnityTest]
+        public IEnumerator Special_HasFiveSecondCooldown()
+        {
+            var root = new GameObject("Special Cooldown Test Root");
+            var game = root.AddComponent<PrototypeGame>();
+            yield return null;
+
+            PlayerAvatar player = game.PlayerCharacter;
+            Assert.That(player.TryStartSpecial(), Is.True);
+            Assert.That(player.TryStartSpecial(), Is.False);
+            Assert.That(player.SpecialCooldownRemaining, Is.GreaterThan(4.8f));
+
+            Object.Destroy(root);
+        }
+
+        [UnityTest]
+        public IEnumerator CombatFloors_LockUntilAllEnemiesAreDefeated()
+        {
+            var root = new GameObject("Combat Gate Test Root");
+            var game = root.AddComponent<PrototypeGame>();
+            yield return null;
+
+            Assert.That(game.IsFloorGateLocked(0), Is.True);
+            Assert.That(game.GetEnemyCountOnFloor(48), Is.EqualTo(5));
+
+            HumanoidMeleeEnemy groundEnemy = game.GetEnemy(EnemyWeaponType.Sword);
+            groundEnemy.ReceivePlayerAttack(groundEnemy.MaxHealth);
+
+            Assert.That(game.GetEnemyCountOnFloor(0), Is.Zero);
+            Assert.That(game.IsFloorGateLocked(0), Is.False);
+
+            Object.Destroy(root);
+        }
+
+        [UnityTest]
+        public IEnumerator ThreeRevivesThenFourthDeathReturnsToFloorOne()
+        {
+            var root = new GameObject("Lives Test Root");
+            var game = root.AddComponent<PrototypeGame>();
+            yield return null;
+
+            game.PlayerCharacter.transform.position = new Vector3(0f, 50f, 0f);
+            game.TakeDamage(game.MaxHealth);
+            Assert.That(game.RevivesRemaining, Is.EqualTo(2));
+            Assert.That(game.Health, Is.EqualTo(game.MaxHealth));
+            Assert.That(game.PlayerCharacter.transform.position.y, Is.EqualTo(50f).Within(0.01f));
+
+            for (int death = 0; death < 3; death++)
+            {
+                yield return new WaitForSeconds(1.3f);
+                game.TakeDamage(game.MaxHealth);
+            }
+
+            Assert.That(game.RevivesRemaining, Is.EqualTo(3));
+            Assert.That(game.PlayerCharacter.transform.position.y, Is.EqualTo(-2.8f).Within(0.01f));
+            Assert.That(game.IsFloorGateLocked(0), Is.True);
+
+            Object.Destroy(root);
+        }
     }
 }

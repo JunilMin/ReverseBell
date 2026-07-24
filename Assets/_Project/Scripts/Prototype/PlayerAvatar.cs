@@ -9,12 +9,13 @@ namespace ReverseBell.Prototype
     {
         private const float MoveSpeed = 6f;
         private const float JumpSpeed = 12.5f;
-        private const float ParryDuration = 0.18f;
+        private const float ParryDuration = 0.12f;
+        private const float ParryCooldown = 0.7f;
         private const float AttackDuration = 0.28f;
         private const float SpecialDuration = 0.45f;
         private const float HurtDuration = 0.35f;
         private const float AttackCooldown = 0.32f;
-        private const float SpecialCooldown = 0.7f;
+        private const float SpecialCooldown = 5f;
 
         private Rigidbody2D body;
         private SpriteRenderer parryRenderer;
@@ -26,6 +27,7 @@ namespace ReverseBell.Prototype
         private float specialUntil;
         private float nextAttackAt;
         private float nextSpecialAt;
+        private float nextParryAt;
         private float facingDirection = 1f;
         private float attackImpactAt;
         private float specialImpactAt;
@@ -37,6 +39,8 @@ namespace ReverseBell.Prototype
 
         public bool IsParrying => Time.time <= parryUntil;
         public float FacingDirection => facingDirection;
+        public float ParryCooldownRemaining => Mathf.Max(0f, nextParryAt - Time.time);
+        public float SpecialCooldownRemaining => Mathf.Max(0f, nextSpecialAt - Time.time);
         public bool IsSwordAction =>
             IsParrying || Time.time <= attackUntil || Time.time <= specialUntil;
         public HeroActionState CurrentAction
@@ -88,11 +92,11 @@ namespace ReverseBell.Prototype
 
             var parryObject = new GameObject("Parry Flash");
             parryObject.transform.SetParent(transform, false);
-            parryObject.transform.localScale = new Vector3(2.3f, 1.6f, 1f);
+            parryObject.transform.localScale = new Vector3(0.48f, 0.92f, 1f);
             parryRenderer = parryObject.AddComponent<SpriteRenderer>();
             parryRenderer.sprite = PrototypeVisuals.CircleSprite;
-            parryRenderer.color = new Color(0.35f, 0.9f, 1f, 0.22f);
-            parryRenderer.sortingOrder = -1;
+            parryRenderer.color = new Color(0.35f, 0.9f, 1f, 0.58f);
+            parryRenderer.sortingOrder = 5;
             parryRenderer.enabled = false;
         }
 
@@ -124,20 +128,17 @@ namespace ReverseBell.Prototype
 
             if (WasParryPressed())
             {
-                parryStartedAt = Time.time;
-                parryUntil = Time.time + ParryDuration;
+                TryStartParry();
             }
 
-            if (WasSpecialPressed() && Time.time >= nextSpecialAt)
+            if (WasSpecialPressed())
             {
-                specialUntil = Time.time + SpecialDuration;
-                nextSpecialAt = Time.time + SpecialCooldown;
-                specialImpactAt = Time.time + 0.2f;
-                queuedSpecialDirection = facingDirection;
-                specialImpactQueued = true;
+                TryStartSpecial();
             }
 
             parryRenderer.enabled = IsParrying;
+            parryRenderer.transform.localPosition =
+                new Vector3(facingDirection * 0.55f, 0.02f, 0f);
             characterVisual.SetPose(movement, body.linearVelocity.y, IsGrounded(), CurrentAction);
         }
 
@@ -158,7 +159,12 @@ namespace ReverseBell.Prototype
 
         public void ResetPosition()
         {
-            transform.position = new Vector3(checkpoint.x, checkpoint.y, 0f);
+            RespawnAt(checkpoint);
+        }
+
+        public void RespawnAt(Vector2 position)
+        {
+            transform.position = new Vector3(position.x, position.y, 0f);
             body.linearVelocity = Vector2.zero;
         }
 
@@ -172,6 +178,34 @@ namespace ReverseBell.Prototype
             hurtUntil = Time.time + HurtDuration;
         }
 
+        public bool TryStartParry()
+        {
+            if (Time.time < nextParryAt)
+            {
+                return false;
+            }
+
+            parryStartedAt = Time.time;
+            parryUntil = Time.time + ParryDuration;
+            nextParryAt = Time.time + ParryCooldown;
+            return true;
+        }
+
+        public bool TryStartSpecial()
+        {
+            if (Time.time < nextSpecialAt)
+            {
+                return false;
+            }
+
+            specialUntil = Time.time + SpecialDuration;
+            nextSpecialAt = Time.time + SpecialCooldown;
+            specialImpactAt = Time.time + 0.2f;
+            queuedSpecialDirection = facingDirection;
+            specialImpactQueued = true;
+            return true;
+        }
+
         public ParryGrade EvaluateParry()
         {
             if (!IsParrying)
@@ -180,7 +214,18 @@ namespace ReverseBell.Prototype
             }
 
             float elapsed = Time.time - parryStartedAt;
-            return elapsed <= 0.085f ? ParryGrade.Perfect : ParryGrade.Good;
+            return elapsed <= 0.065f ? ParryGrade.Perfect : ParryGrade.Good;
+        }
+
+        public ParryGrade ConsumeParry()
+        {
+            ParryGrade grade = EvaluateParry();
+            if (grade != ParryGrade.None)
+            {
+                parryUntil = float.NegativeInfinity;
+            }
+
+            return grade;
         }
 
         private bool IsGrounded()

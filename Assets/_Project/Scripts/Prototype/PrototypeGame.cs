@@ -23,7 +23,14 @@ namespace ReverseBell.Prototype
 
         private PlayerAvatar player;
         private readonly List<HumanoidMeleeEnemy> enemies = new List<HumanoidMeleeEnemy>();
+        private readonly Dictionary<int, List<HumanoidMeleeEnemy>> enemiesByFloor =
+            new Dictionary<int, List<HumanoidMeleeEnemy>>();
+        private readonly Dictionary<int, GameObject> combatGates =
+            new Dictionary<int, GameObject>();
+        private readonly List<EnemySpawnDefinition> enemySpawnDefinitions =
+            new List<EnemySpawnDefinition>();
         private RhythmClock rhythmClock;
+        private TowerHazardDirector hazardDirector;
         private Transform towerBell;
         private GUIStyle titleStyle;
         private GUIStyle bodyStyle;
@@ -32,9 +39,11 @@ namespace ReverseBell.Prototype
         private bool towerCleared;
         private float feedbackUntil;
         private WorldHealthBar playerHealthBar;
+        private float damageInvulnerableUntil;
 
         public int Health { get; private set; } = PlayerMaximumHealth;
         public int MaxHealth => PlayerMaximumHealth;
+        public int RevivesRemaining { get; private set; } = 3;
 
         public int Score { get; private set; }
 
@@ -62,16 +71,10 @@ namespace ReverseBell.Prototype
             rhythmClock = FindFirstObjectByType<RhythmClock>();
             foreach (HumanoidMeleeEnemy enemy in enemies)
             {
-                enemy.Initialize(
-                    this,
-                    player,
-                    rhythmClock,
-                    enemy.WeaponType,
-                    enemy.transform.position.x - 1.8f,
-                    enemy.transform.position.x + 1.8f);
+                InitializeEnemy(enemy);
             }
 
-            var hazardDirector = gameObject.AddComponent<TowerHazardDirector>();
+            hazardDirector = gameObject.AddComponent<TowerHazardDirector>();
             hazardDirector.Initialize(this, player);
         }
 
@@ -139,6 +142,15 @@ namespace ReverseBell.Prototype
         public void RegisterEnemyDefeat(HumanoidMeleeEnemy enemy)
         {
             enemies.Remove(enemy);
+            if (enemiesByFloor.TryGetValue(enemy.FloorIndex, out List<HumanoidMeleeEnemy> floorEnemies))
+            {
+                floorEnemies.Remove(enemy);
+                if (floorEnemies.TrueForAll(floorEnemy => floorEnemy == null))
+                {
+                    UnlockCombatGate(enemy.FloorIndex);
+                }
+            }
+
             Score += 500;
             Feedback = enemy.WeaponType.ToString().ToUpperInvariant() + " GUARD DEFEATED";
             feedbackUntil = Time.time + 1.2f;
@@ -200,6 +212,21 @@ namespace ReverseBell.Prototype
             return enemies.Find(enemy => enemy != null && enemy.WeaponType == type);
         }
 
+        public int GetEnemyCountOnFloor(int floorIndex)
+        {
+            return enemiesByFloor.TryGetValue(
+                floorIndex,
+                out List<HumanoidMeleeEnemy> floorEnemies)
+                ? floorEnemies.FindAll(enemy => enemy != null).Count
+                : 0;
+        }
+
+        public bool IsFloorGateLocked(int floorIndex)
+        {
+            return combatGates.TryGetValue(floorIndex, out GameObject gate) &&
+                gate != null;
+        }
+
         private HumanoidMeleeEnemy FindClosestEnemy(
             float facingDirection,
             float horizontalRange,
@@ -237,6 +264,11 @@ namespace ReverseBell.Prototype
 
         public void TakeDamage(int amount = 1)
         {
+            if (Time.time < damageInvulnerableUntil)
+            {
+                return;
+            }
+
             Health = Mathf.Max(0, Health - Mathf.Max(1, amount));
             Combo = 0;
             ResonancePoints = Mathf.Max(0, ResonancePoints - 3);
@@ -250,14 +282,37 @@ namespace ReverseBell.Prototype
                 return;
             }
 
+            HandlePlayerDeath();
+        }
+
+        private void HandlePlayerDeath()
+        {
+            Vector2 deathPosition = player.transform.position;
             Health = PlayerMaximumHealth;
-            Score = 0;
             Combo = 0;
             ResonancePoints = 0;
-            Feedback = "RESTART";
-            feedbackUntil = Time.time + 1f;
-            player.ResetPosition();
+            damageInvulnerableUntil = Time.time + 1.25f;
             playerHealthBar.SetHealth(Health, PlayerMaximumHealth);
+
+            if (RevivesRemaining > 0)
+            {
+                RevivesRemaining--;
+                player.RespawnAt(deathPosition);
+                Feedback = "REVIVED - " + RevivesRemaining + " LIVES LEFT";
+                feedbackUntil = Time.time + 1.2f;
+                return;
+            }
+
+            RevivesRemaining = 3;
+            Score = 0;
+            checkpointLevel = 0;
+            towerCleared = false;
+            Vector2 startPosition = new Vector2(-5.5f, -2.8f);
+            player.SetCheckpoint(startPosition);
+            player.RespawnAt(startPosition);
+            RebuildCombatRun();
+            Feedback = "ALL LIVES LOST - RETURN TO FLOOR 1";
+            feedbackUntil = Time.time + 1.5f;
         }
 
         private static Camera ConfigureCamera()
@@ -307,16 +362,19 @@ namespace ReverseBell.Prototype
             playerHealthBar = player.gameObject.AddComponent<WorldHealthBar>();
             playerHealthBar.Initialize(1.15f, 1.35f, new Color(0.2f, 0.9f, 0.35f));
             playerHealthBar.SetHealth(Health, PlayerMaximumHealth);
-            CreateEnemy("Sword Guard", new Vector2(5f, -2.8f), EnemyWeaponType.Sword);
+            CreateEnemy("Sword Guard", new Vector2(5f, -2.8f), EnemyWeaponType.Sword, 0);
             CreateEnemy(
                 "Spear Guard",
                 new Vector2(-5f, PlatformY(4) + EnemyStandingOffset),
-                EnemyWeaponType.Spear);
+                EnemyWeaponType.Spear,
+                4);
             CreateEnemy(
                 "Shield Guard",
                 new Vector2(-5f, PlatformY(8) + EnemyStandingOffset),
-                EnemyWeaponType.Shield);
+                EnemyWeaponType.Shield,
+                8);
             CreateUpperTowerEnemies();
+            CreateCombatGates();
 
             towerBell = CreateVisualBlock(
                 "Tower Bell",
@@ -338,31 +396,156 @@ namespace ReverseBell.Prototype
             return playerObject.AddComponent<PlayerAvatar>();
         }
 
-        private void CreateEnemy(string enemyName, Vector2 position, EnemyWeaponType weaponType)
+        private HumanoidMeleeEnemy CreateEnemy(
+            string enemyName,
+            Vector2 position,
+            EnemyWeaponType weaponType,
+            int floorIndex,
+            bool recordSpawn = true)
         {
             var enemyObject = new GameObject(enemyName);
             enemyObject.transform.position = position;
             var enemy = enemyObject.AddComponent<HumanoidMeleeEnemy>();
             enemy.SetWeaponType(weaponType);
+            enemy.SetFloorIndex(floorIndex);
             enemies.Add(enemy);
+
+            if (!enemiesByFloor.TryGetValue(floorIndex, out List<HumanoidMeleeEnemy> floorEnemies))
+            {
+                floorEnemies = new List<HumanoidMeleeEnemy>();
+                enemiesByFloor.Add(floorIndex, floorEnemies);
+            }
+            floorEnemies.Add(enemy);
+
+            if (recordSpawn)
+            {
+                enemySpawnDefinitions.Add(
+                    new EnemySpawnDefinition(enemyName, position, weaponType, floorIndex));
+            }
+
+            return enemy;
+        }
+
+        private void InitializeEnemy(HumanoidMeleeEnemy enemy)
+        {
+            enemy.Initialize(
+                this,
+                player,
+                rhythmClock,
+                enemy.WeaponType,
+                enemy.transform.position.x - 1.8f,
+                enemy.transform.position.x + 1.8f);
+        }
+
+        private void RebuildCombatRun()
+        {
+            HumanoidMeleeEnemy[] existingEnemies =
+                FindObjectsByType<HumanoidMeleeEnemy>(FindObjectsSortMode.None);
+            foreach (HumanoidMeleeEnemy enemy in existingEnemies)
+            {
+                enemy.gameObject.SetActive(false);
+                Destroy(enemy.gameObject);
+            }
+
+            foreach (GameObject gate in combatGates.Values)
+            {
+                if (gate != null)
+                {
+                    Destroy(gate);
+                }
+            }
+
+            WallTrapProjectile[] projectiles =
+                FindObjectsByType<WallTrapProjectile>(FindObjectsSortMode.None);
+            foreach (WallTrapProjectile projectile in projectiles)
+            {
+                Destroy(projectile.gameObject);
+            }
+
+            enemies.Clear();
+            enemiesByFloor.Clear();
+            combatGates.Clear();
+
+            foreach (EnemySpawnDefinition spawn in enemySpawnDefinitions)
+            {
+                HumanoidMeleeEnemy enemy = CreateEnemy(
+                    spawn.Name,
+                    spawn.Position,
+                    spawn.WeaponType,
+                    spawn.FloorIndex,
+                    false);
+                InitializeEnemy(enemy);
+            }
+
+            CreateCombatGates();
+            hazardDirector?.ResetDirector();
+
+            if (towerBell != null)
+            {
+                towerBell.GetComponent<SpriteRenderer>().color = new Color(1f, 0.72f, 0.16f);
+            }
         }
 
         private void CreateUpperTowerEnemies()
         {
             for (int floorIndex = 12; floorIndex < PlatformCount; floorIndex += 4)
             {
-                EnemyWeaponType type = ((floorIndex / 4) % 3) switch
+                int enemyCount = Mathf.Clamp(1 + (floorIndex / 12), 1, 5);
+                float platformX = platformXPattern[floorIndex % platformXPattern.Length];
+
+                for (int enemyIndex = 0; enemyIndex < enemyCount; enemyIndex++)
                 {
-                    0 => EnemyWeaponType.Sword,
-                    1 => EnemyWeaponType.Spear,
-                    _ => EnemyWeaponType.Shield
-                };
-                float x = platformXPattern[floorIndex % platformXPattern.Length];
-                CreateEnemy(
-                    type + " Guard Floor " + (floorIndex + 1),
-                    new Vector2(x, PlatformY(floorIndex) + EnemyStandingOffset),
-                    type);
+                    EnemyWeaponType type = ((floorIndex / 4 + enemyIndex) % 3) switch
+                    {
+                        0 => EnemyWeaponType.Sword,
+                        1 => EnemyWeaponType.Spear,
+                        _ => EnemyWeaponType.Shield
+                    };
+                    float offset = (enemyIndex - ((enemyCount - 1) * 0.5f)) * 0.75f;
+                    CreateEnemy(
+                        type + " Guard Floor " + (floorIndex + 1) + " #" + (enemyIndex + 1),
+                        new Vector2(
+                            platformX + offset,
+                            PlatformY(floorIndex) + EnemyStandingOffset),
+                        type,
+                        floorIndex);
+                }
             }
+        }
+
+        private void CreateCombatGates()
+        {
+            foreach (int floorIndex in enemiesByFloor.Keys)
+            {
+                CreateCombatGate(floorIndex);
+            }
+        }
+
+        private void CreateCombatGate(int floorIndex)
+        {
+            var gate = new GameObject("Combat Gate Floor " + (floorIndex + 1));
+            gate.transform.position = new Vector3(0f, PlatformY(floorIndex) + 2.1f, 0f);
+            gate.transform.localScale = new Vector3(16.2f, 0.18f, 1f);
+
+            var renderer = gate.AddComponent<SpriteRenderer>();
+            renderer.sprite = PrototypeVisuals.WhiteSprite;
+            renderer.color = new Color(0.15f, 0.8f, 1f, 0.72f);
+            renderer.sortingOrder = 12;
+            gate.AddComponent<BoxCollider2D>();
+            combatGates[floorIndex] = gate;
+        }
+
+        private void UnlockCombatGate(int floorIndex)
+        {
+            if (!combatGates.TryGetValue(floorIndex, out GameObject gate))
+            {
+                return;
+            }
+
+            combatGates.Remove(floorIndex);
+            Destroy(gate);
+            Feedback = "FLOOR " + (floorIndex + 1) + " CLEARED - PATH OPEN";
+            feedbackUntil = Time.time + 1.2f;
         }
 
         private void CreateTowerPlatforms()
@@ -533,12 +716,16 @@ namespace ReverseBell.Prototype
                 1,
                 PlatformCount);
             GUI.Label(
-                new Rect(Screen.width - 350f, 24f, 320f, 180f),
+                new Rect(Screen.width - 350f, 24f, 320f, 230f),
                 "HP  " + Health + " / " + PlayerMaximumHealth +
                 "\nSCORE  " + Score +
+                "\nLIVES  " + RevivesRemaining +
                 "\nCOMBO  x" + Combo +
                 "\nRESONANCE  " + ResonanceLevel + " / 4" +
-                (ResonanceLevel >= 4 ? "  SPECIAL READY" : string.Empty) +
+                (ResonanceLevel >= 4 && player.SpecialCooldownRemaining <= 0f
+                    ? "  SPECIAL READY"
+                    : string.Empty) +
+                "\nSPECIAL CD  " + player.SpecialCooldownRemaining.ToString("0.0") + "s" +
                 "\nENEMIES  " + EnemiesRemaining +
                 "\nFLOOR  " + floor + " / " + PlatformCount +
                 "\nBEAT  " + beatText,
@@ -575,6 +762,26 @@ namespace ReverseBell.Prototype
                 alignment = TextAnchor.MiddleCenter,
                 normal = { textColor = new Color(1f, 0.8f, 0.25f) }
             };
+        }
+
+        private sealed class EnemySpawnDefinition
+        {
+            public EnemySpawnDefinition(
+                string name,
+                Vector2 position,
+                EnemyWeaponType weaponType,
+                int floorIndex)
+            {
+                Name = name;
+                Position = position;
+                WeaponType = weaponType;
+                FloorIndex = floorIndex;
+            }
+
+            public string Name { get; }
+            public Vector2 Position { get; }
+            public EnemyWeaponType WeaponType { get; }
+            public int FloorIndex { get; }
         }
     }
 }
