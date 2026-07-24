@@ -18,6 +18,8 @@ namespace ReverseBell.Prototype
         private float parryAnimationStartedAt;
         private bool wasParrying;
 
+        public bool FacesRight => characterRenderer != null && characterRenderer.flipX;
+
         private void Awake()
         {
             characterRenderer = GetComponent<SpriteRenderer>();
@@ -135,4 +137,3 @@ namespace ReverseBell.Prototype
         }
     }
 }
-
