@@ -368,7 +368,8 @@ namespace ReverseBell.Tests
             GameObject firstGate = GameObject.Find("Combat Gate Floor 1");
             Assert.That(firstGate, Is.Not.Null);
             Assert.That(firstGate.transform.localScale.x, Is.LessThan(0.3f));
-            Assert.That(firstGate.transform.localScale.y, Is.GreaterThan(3f));
+            Assert.That(firstGate.transform.localScale.y, Is.LessThan(1f));
+            Assert.That(firstGate.GetComponent<Collider2D>(), Is.Null);
 
             HumanoidMeleeEnemy groundEnemy = game.GetEnemy(EnemyWeaponType.Sword);
             groundEnemy.ReceivePlayerAttack(groundEnemy.MaxHealth);

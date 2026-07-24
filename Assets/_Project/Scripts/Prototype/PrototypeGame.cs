@@ -824,17 +824,16 @@ namespace ReverseBell.Prototype
         {
             var gate = new GameObject("Combat Gate Floor " + (floorIndex + 1));
             gate.transform.position = new Vector3(
-                1.96f,
-                PlatformY(floorIndex) + 1.72f,
+                1.72f,
+                PlatformY(floorIndex) + 0.62f,
                 0f);
-            gate.transform.localScale = new Vector3(0.24f, 3.05f, 1f);
+            gate.transform.localScale = new Vector3(0.18f, 0.72f, 1f);
             ParentToFloorSection(gate, floorIndex);
 
             var renderer = gate.AddComponent<SpriteRenderer>();
             renderer.sprite = PrototypeVisuals.WhiteSprite;
-            renderer.color = new Color(0.15f, 0.8f, 1f, 0.72f);
+            renderer.color = new Color(1f, 0.55f, 0.12f, 0.85f);
             renderer.sortingOrder = 12;
-            gate.AddComponent<BoxCollider2D>();
             gate.SetActive(!TestModeEnabled);
             combatGates[floorIndex] = gate;
         }
