@@ -990,16 +990,12 @@ namespace ReverseBell.Prototype
             var ramp = new GameObject(stairName + " Ramp");
             ramp.transform.position = Vector3.zero;
             var rampCollider = ramp.AddComponent<PolygonCollider2D>();
+            rampCollider.isTrigger = true;
             rampCollider.points = new[]
             {
                 new Vector2(StartX, startY - 0.18f),
                 new Vector2(EndX, startY - 0.18f),
                 new Vector2(EndX, endY)
-            };
-            rampCollider.sharedMaterial = new PhysicsMaterial2D(stairName + " Grip")
-            {
-                friction = 0.9f,
-                bounciness = 0f
             };
             ParentToFloorSection(ramp, floorIndex);
 
