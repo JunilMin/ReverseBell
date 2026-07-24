@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using ReverseBell.Core;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace ReverseBell.Prototype
 {
@@ -47,6 +48,7 @@ namespace ReverseBell.Prototype
         public int Health { get; private set; } = PlayerMaximumHealth;
         public int MaxHealth => PlayerMaximumHealth;
         public int RevivesRemaining { get; private set; } = 3;
+        public bool TestModeEnabled { get; private set; }
 
         public int Score { get; private set; }
 
@@ -107,6 +109,11 @@ namespace ReverseBell.Prototype
 
         private void Update()
         {
+            if (Keyboard.current != null && Keyboard.current.f4Key.wasPressedThisFrame)
+            {
+                SetTestMode(!TestModeEnabled);
+            }
+
             if (player.transform.position.y < GetFallLimit())
             {
                 player.ResetPosition();
@@ -231,7 +238,8 @@ namespace ReverseBell.Prototype
         public bool IsFloorGateLocked(int floorIndex)
         {
             return combatGates.TryGetValue(floorIndex, out GameObject gate) &&
-                gate != null;
+                gate != null &&
+                gate.activeSelf;
         }
 
         private HumanoidMeleeEnemy FindClosestEnemy(
@@ -271,7 +279,7 @@ namespace ReverseBell.Prototype
 
         public void TakeDamage(int amount = 1)
         {
-            if (Time.time < damageInvulnerableUntil)
+            if (TestModeEnabled || Time.time < damageInvulnerableUntil)
             {
                 return;
             }
@@ -547,7 +555,25 @@ namespace ReverseBell.Prototype
             renderer.color = new Color(0.15f, 0.8f, 1f, 0.72f);
             renderer.sortingOrder = 12;
             gate.AddComponent<BoxCollider2D>();
+            gate.SetActive(!TestModeEnabled);
             combatGates[floorIndex] = gate;
+        }
+
+        public void SetTestMode(bool enabled)
+        {
+            TestModeEnabled = enabled;
+            foreach (GameObject gate in combatGates.Values)
+            {
+                if (gate != null)
+                {
+                    gate.SetActive(!enabled);
+                }
+            }
+
+            Feedback = enabled
+                ? "TEST MODE ON - INVINCIBLE / GATES DISABLED"
+                : "TEST MODE OFF";
+            feedbackUntil = Time.time + 1.5f;
         }
 
         private void UnlockCombatGate(int floorIndex)
@@ -808,6 +834,7 @@ namespace ReverseBell.Prototype
                     ? "  SPECIAL READY"
                     : string.Empty) +
                 "\nSPECIAL CD  " + player.SpecialCooldownRemaining.ToString("0.0") + "s" +
+                (TestModeEnabled ? "\nTEST MODE  ON (F4)" : "\nTEST MODE  OFF (F4)") +
                 "\nENEMIES  " + EnemiesRemaining +
                 "\nFLOOR  " + floor + " / " + PlatformCount +
                 "\nBEAT  " + beatText,

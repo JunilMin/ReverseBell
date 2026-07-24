@@ -57,7 +57,9 @@ namespace ReverseBell.Prototype
                 Resources.Load<Texture2D>("HeroSwordsman/Attack"),
                 6,
                 1,
-                new[] { 0, 0, 4 },
+                // The hero pack has no dedicated block sheet. These sword frames
+                // lift the blade from a low guard into a firm high guard.
+                new[] { 4, 3, 0 },
                 52f);
             specialFrames = CreateFrames(
                 Resources.Load<Texture2D>("HeroSwordsman/JumpAttack"),

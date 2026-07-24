@@ -75,7 +75,7 @@ namespace ReverseBell.Prototype
             }
 
             resolved = true;
-            if (player.ConsumeParry() != ParryGrade.None)
+            if (player.ConsumeParryFrom(transform.position) != ParryGrade.None)
             {
                 game.RegisterHazardParry();
             }

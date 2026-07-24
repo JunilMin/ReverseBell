@@ -160,7 +160,7 @@ namespace ReverseBell.Prototype
                 return;
             }
 
-            ParryGrade grade = player.ConsumeParry();
+            ParryGrade grade = player.ConsumeParryFrom(transform.position);
             if (grade == ParryGrade.None)
             {
                 game.TakeDamage(attackDamage);
