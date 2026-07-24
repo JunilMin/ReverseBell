@@ -857,29 +857,27 @@ namespace ReverseBell.Prototype
             {
                 float y = PlatformY(index);
                 float x = platformXPattern[index % platformXPattern.Length];
-                float width = index % 4 == 3 ? 6.2f : 5.4f;
 
                 GameObject platform = CreateBlock(
-                    "Tower Platform " + (index + 1),
-                    new Vector2(x, y),
-                    new Vector2(width, 0.38f),
+                    "Floor " + (index + 1) + " Walkway",
+                    new Vector2(0f, y),
+                    new Vector2(15.2f, 0.38f),
                     PlatformColor,
                     true);
                 ParentToFloorSection(platform, index);
 
-                float side = index % 2 == 0 ? 1f : -1f;
-                GameObject upperStep = CreateBlock(
-                    "Tower Step " + (index + 1),
-                    new Vector2(
-                        Mathf.Clamp(x + (side * 4.2f), -6f, 6f),
-                        y + 1.45f),
-                    new Vector2(2.8f, 0.3f),
-                    Color.Lerp(PlatformColor, AccentColor, 0.18f),
-                    true);
-                ParentToFloorSection(upperStep, index);
+                if (index < PlatformCount - 1)
+                {
+                    CreateStairFlight(
+                        index,
+                        y + 0.22f,
+                        PlatformY(index + 1) - 0.22f,
+                        index % 2 == 0);
+                }
 
                 if (index % 3 == 1)
                 {
+                    float side = index % 2 == 0 ? 1f : -1f;
                     GameObject brazier = CreateVisualBlock(
                         "Tower Brazier " + (index + 1),
                         new Vector2(x - (side * 1.8f), y + 0.55f),
@@ -899,6 +897,8 @@ namespace ReverseBell.Prototype
                 }
             }
 
+            CreateEntryStairs();
+
             GameObject bellChamberFloor = CreateBlock(
                 "Bell Chamber Floor",
                 new Vector2(0f, TowerTop),
@@ -906,6 +906,75 @@ namespace ReverseBell.Prototype
                 AccentColor,
                 true);
             ParentToFloorSection(bellChamberFloor, PlatformCount - 1);
+        }
+
+        private void CreateEntryStairs()
+        {
+            CreateStairFlight(
+                0,
+                -3.46f,
+                PlatformY(0) - 0.22f,
+                true,
+                "Tower Entrance");
+        }
+
+        private void CreateStairFlight(
+            int floorIndex,
+            float startY,
+            float endY,
+            bool risesRight,
+            string customName = null)
+        {
+            const int StepCount = 12;
+            const float LeftX = -6.55f;
+            const float RightX = 6.55f;
+            float startX = risesRight ? LeftX : RightX;
+            float endX = risesRight ? RightX : LeftX;
+            string stairName = customName ?? "Stairs " + (floorIndex + 1) + " to " + (floorIndex + 2);
+
+            var ramp = new GameObject(stairName + " Ramp");
+            ramp.transform.position = Vector3.zero;
+            var edge = ramp.AddComponent<EdgeCollider2D>();
+            edge.points = new[]
+            {
+                new Vector2(startX, startY),
+                new Vector2(endX, endY)
+            };
+            edge.edgeRadius = 0.08f;
+            edge.sharedMaterial = new PhysicsMaterial2D(stairName + " Grip")
+            {
+                friction = 0.9f,
+                bounciness = 0f
+            };
+            ParentToFloorSection(ramp, floorIndex);
+
+            Color stairColor = Color.Lerp(PlatformColor, AccentColor, 0.28f);
+            for (int stepIndex = 0; stepIndex < StepCount; stepIndex++)
+            {
+                float t = (stepIndex + 0.5f) / StepCount;
+                float x = Mathf.Lerp(startX, endX, t);
+                float y = Mathf.Lerp(startY, endY, t) - 0.11f;
+                GameObject step = CreateVisualBlock(
+                    stairName + " Step " + (stepIndex + 1),
+                    new Vector2(x, y),
+                    new Vector2(1.35f, 0.22f),
+                    stairColor);
+                step.GetComponent<SpriteRenderer>().sortingOrder = 0;
+                ParentToFloorSection(step, floorIndex);
+            }
+
+            GameObject lowerPost = CreateVisualBlock(
+                stairName + " Lower Post",
+                new Vector2(startX, startY + 0.48f),
+                new Vector2(0.16f, 0.95f),
+                AccentColor);
+            GameObject upperPost = CreateVisualBlock(
+                stairName + " Upper Post",
+                new Vector2(endX, endY + 0.48f),
+                new Vector2(0.16f, 0.95f),
+                AccentColor);
+            ParentToFloorSection(lowerPost, floorIndex);
+            ParentToFloorSection(upperPost, floorIndex);
         }
 
         private void CreateFloorSections()

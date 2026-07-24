@@ -8,7 +8,7 @@ namespace ReverseBell.Prototype
     public sealed class PlayerAvatar : MonoBehaviour
     {
         private const float MoveSpeed = 6f;
-        private const float JumpSpeed = 12.5f;
+        private const float JumpSpeed = 13.5f;
         private const float ParryDuration = 0.26f;
         private const float PerfectParryDuration = 0.11f;
         private const float ParryCooldown = 0.55f;
