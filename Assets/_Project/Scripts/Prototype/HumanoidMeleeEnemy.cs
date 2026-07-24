@@ -16,12 +16,16 @@ namespace ReverseBell.Prototype
         private float attackRange;
         private float moveSpeed;
         private bool defeated;
+        private float stunnedUntil;
+        private int attackDamage;
+        private WorldHealthBar healthBar;
 
         public int Health { get; private set; }
 
         public int MaxHealth { get; private set; }
 
         public EnemyWeaponType WeaponType => weaponType;
+        public bool IsStunned => Time.time < stunnedUntil;
 
         public void SetWeaponType(EnemyWeaponType type)
         {
@@ -43,16 +47,30 @@ namespace ReverseBell.Prototype
             leftBound = patrolLeft;
             rightBound = patrolRight;
 
-            MaxHealth = type == EnemyWeaponType.Shield ? 4 : 3;
+            MaxHealth = type switch
+            {
+                EnemyWeaponType.Shield => 20,
+                EnemyWeaponType.Spear => 15,
+                _ => 12
+            };
             Health = MaxHealth;
             attackRange = type == EnemyWeaponType.Spear ? 1.9f : 1.25f;
             moveSpeed = type == EnemyWeaponType.Shield ? 1.6f : 2.2f;
+            attackDamage = type switch
+            {
+                EnemyWeaponType.Shield => 4,
+                EnemyWeaponType.Spear => 3,
+                _ => 2
+            };
 
             GetComponent<BoxCollider2D>().size = new Vector2(0.8f, 1.4f);
             GetComponent<BoxCollider2D>().isTrigger = true;
 
             visual = gameObject.AddComponent<HumanoidEnemyVisual>();
             visual.Build(type);
+            healthBar = gameObject.AddComponent<WorldHealthBar>();
+            healthBar.Initialize(1.35f, 1.25f, new Color(0.9f, 0.16f, 0.14f));
+            healthBar.SetHealth(Health, MaxHealth);
 
             if (clock != null)
             {
@@ -62,8 +80,9 @@ namespace ReverseBell.Prototype
 
         private void Update()
         {
-            if (defeated)
+            if (defeated || IsStunned)
             {
+                visual.SetMoving(false);
                 return;
             }
 
@@ -100,7 +119,7 @@ namespace ReverseBell.Prototype
 
         private void OnBeat(long beat)
         {
-            if (defeated || !PlayerIsInCombatLane())
+            if (defeated || IsStunned || !PlayerIsInCombatLane())
             {
                 return;
             }
@@ -134,7 +153,7 @@ namespace ReverseBell.Prototype
             ParryGrade grade = player.EvaluateParry();
             if (grade == ParryGrade.None)
             {
-                game.TakeDamage();
+                game.TakeDamage(attackDamage);
                 return;
             }
 
@@ -148,8 +167,20 @@ namespace ReverseBell.Prototype
                 return;
             }
 
-            int damage = game.RegisterParry(grade);
-            ApplyDamage(damage);
+            game.RegisterParry(grade);
+            float direction = Mathf.Sign(transform.position.x - player.transform.position.x);
+            if (Mathf.Approximately(direction, 0f))
+            {
+                direction = -player.FacingDirection;
+            }
+
+            float pushedX = Mathf.Clamp(
+                transform.position.x + (direction * 0.7f),
+                leftBound,
+                rightBound);
+            transform.position = new Vector3(pushedX, transform.position.y, 0f);
+            stunnedUntil = Time.time + 1f;
+            visual.PlayStun(1f);
         }
 
         public void ReceivePlayerAttack(int damage)
@@ -165,6 +196,7 @@ namespace ReverseBell.Prototype
         private void ApplyDamage(int damage)
         {
             Health = Mathf.Max(0, Health - damage);
+            healthBar.SetHealth(Health, MaxHealth);
 
             if (Health > 0)
             {
