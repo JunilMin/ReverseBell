@@ -9,6 +9,7 @@ namespace ReverseBell.Prototype
     {
         private const float MoveSpeed = 6f;
         private const float JumpSpeed = 13.5f;
+        private const float StairClimbSpeed = 4.9f;
         private const float ParryDuration = 0.26f;
         private const float PerfectParryDuration = 0.11f;
         private const float ParryCooldown = 0.55f;
@@ -38,6 +39,7 @@ namespace ReverseBell.Prototype
         private bool attackImpactQueued;
         private bool specialImpactQueued;
         private float hurtUntil;
+        private StairClimbZone activeStair;
 
         public bool IsParrying => Time.time <= parryUntil;
         public float FacingDirection => facingDirection;
@@ -113,6 +115,12 @@ namespace ReverseBell.Prototype
             }
 
             body.linearVelocity = new Vector2(movement * MoveSpeed, body.linearVelocity.y);
+            if (activeStair != null && Mathf.Abs(movement) > 0.05f)
+            {
+                body.linearVelocity = new Vector2(
+                    movement * MoveSpeed,
+                    movement * activeStair.RiseDirection * StairClimbSpeed);
+            }
 
             if (WasJumpPressed() && IsGrounded())
             {
@@ -319,5 +327,28 @@ namespace ReverseBell.Prototype
             return Keyboard.current != null &&
                 Keyboard.current.cKey.wasPressedThisFrame;
         }
+
+        private void OnTriggerStay2D(Collider2D other)
+        {
+            StairClimbZone stair = other.GetComponent<StairClimbZone>();
+            if (stair != null)
+            {
+                activeStair = stair;
+            }
+        }
+
+        private void OnTriggerExit2D(Collider2D other)
+        {
+            StairClimbZone stair = other.GetComponent<StairClimbZone>();
+            if (stair != null && stair == activeStair)
+            {
+                activeStair = null;
+            }
+        }
+    }
+
+    public sealed class StairClimbZone : MonoBehaviour
+    {
+        public float RiseDirection => 1f;
     }
 }

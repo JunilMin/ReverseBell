@@ -32,7 +32,7 @@ namespace ReverseBell.Prototype
                 return;
             }
 
-            int floor = Mathf.Max(1, Mathf.FloorToInt((player.transform.position.y + 4f) / 3.35f) + 1);
+            int floor = Mathf.Max(1, Mathf.FloorToInt((player.transform.position.y + 4f) / 4.6f) + 1);
             if (floor < 6)
             {
                 nextSpawnAt = Time.time + 1f;

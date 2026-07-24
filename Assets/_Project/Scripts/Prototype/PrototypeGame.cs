@@ -15,14 +15,14 @@ namespace ReverseBell.Prototype
         private const int PlatformCount = 50;
         private const int PlayerMaximumHealth = 10;
         private const float PlatformStartY = -1.6f;
-        private const float PlatformSpacing = 3.35f;
+        private const float PlatformSpacing = 4.6f;
         private const float TowerTop =
             PlatformStartY + ((PlatformCount - 1) * PlatformSpacing) + 1.9f;
         private const float EnemyStandingOffset = 0.89f;
         private const int FloorsBelowPlayerToKeepActive = 5;
         private const int FloorsAbovePlayerToKeepActive = 7;
 
-        private readonly float[] platformXPattern = { -5f, 0f, 5f, 0f };
+        private readonly float[] platformXPattern = { -4.8f, -1.8f, 0.2f, -3.2f };
 
         private PlayerAvatar player;
         private readonly List<HumanoidMeleeEnemy> enemies = new List<HumanoidMeleeEnemy>();
@@ -471,7 +471,7 @@ namespace ReverseBell.Prototype
             playerHealthBar = player.gameObject.AddComponent<WorldHealthBar>();
             playerHealthBar.Initialize(1.15f, 1.35f, new Color(0.2f, 0.9f, 0.35f));
             playerHealthBar.SetHealth(Health, PlayerMaximumHealth);
-            CreateEnemy("Sword Guard", new Vector2(5f, -2.8f), EnemyWeaponType.Sword, 0);
+            CreateEnemy("Sword Guard", new Vector2(0.2f, -2.8f), EnemyWeaponType.Sword, 0);
             CreateEnemy(
                 "Spear Guard",
                 new Vector2(-5f, PlatformY(4) + EnemyStandingOffset),
@@ -860,19 +860,25 @@ namespace ReverseBell.Prototype
 
                 GameObject platform = CreateBlock(
                     "Floor " + (index + 1) + " Walkway",
-                    new Vector2(0f, y),
-                    new Vector2(15.2f, 0.38f),
+                    new Vector2(-2.7f, y),
+                    new Vector2(9.4f, 0.42f),
                     PlatformColor,
                     true);
                 ParentToFloorSection(platform, index);
+
+                GameObject stairLanding = CreateOneWayLanding(
+                    "Floor " + (index + 1) + " Stair Landing",
+                    new Vector2(4.45f, y),
+                    new Vector2(5.1f, 0.32f),
+                    Color.Lerp(PlatformColor, AccentColor, 0.18f));
+                ParentToFloorSection(stairLanding, index);
 
                 if (index < PlatformCount - 1)
                 {
                     CreateStairFlight(
                         index,
-                        y + 0.22f,
-                        PlatformY(index + 1) - 0.22f,
-                        index % 2 == 0);
+                        y + 0.21f,
+                        PlatformY(index + 1) + 0.21f);
                 }
 
                 if (index % 3 == 1)
@@ -913,8 +919,7 @@ namespace ReverseBell.Prototype
             CreateStairFlight(
                 0,
                 -3.46f,
-                PlatformY(0) - 0.22f,
-                true,
+                PlatformY(0) + 0.21f,
                 "Tower Entrance");
         }
 
@@ -922,37 +927,50 @@ namespace ReverseBell.Prototype
             int floorIndex,
             float startY,
             float endY,
-            bool risesRight,
             string customName = null)
         {
-            const int StepCount = 12;
-            const float LeftX = -6.55f;
-            const float RightX = 6.55f;
-            float startX = risesRight ? LeftX : RightX;
-            float endX = risesRight ? RightX : LeftX;
+            const int StepCount = 11;
+            const float StartX = 1.75f;
+            const float EndX = 6.95f;
             string stairName = customName ?? "Stairs " + (floorIndex + 1) + " to " + (floorIndex + 2);
 
             var ramp = new GameObject(stairName + " Ramp");
             ramp.transform.position = Vector3.zero;
-            var edge = ramp.AddComponent<EdgeCollider2D>();
-            edge.points = new[]
+            var rampCollider = ramp.AddComponent<PolygonCollider2D>();
+            rampCollider.points = new[]
             {
-                new Vector2(startX, startY),
-                new Vector2(endX, endY)
+                new Vector2(StartX, startY - 0.18f),
+                new Vector2(EndX, startY - 0.18f),
+                new Vector2(EndX, endY)
             };
-            edge.edgeRadius = 0.08f;
-            edge.sharedMaterial = new PhysicsMaterial2D(stairName + " Grip")
+            rampCollider.sharedMaterial = new PhysicsMaterial2D(stairName + " Grip")
             {
                 friction = 0.9f,
                 bounciness = 0f
             };
             ParentToFloorSection(ramp, floorIndex);
 
+            float angle = Mathf.Atan2(endY - startY, EndX - StartX) * Mathf.Rad2Deg;
+            float length = Vector2.Distance(
+                new Vector2(StartX, startY),
+                new Vector2(EndX, endY));
+            var climbZone = new GameObject(stairName + " Climb Zone");
+            climbZone.transform.position = new Vector3(
+                (StartX + EndX) * 0.5f,
+                (startY + endY) * 0.5f + 0.35f,
+                0f);
+            climbZone.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+            var climbTrigger = climbZone.AddComponent<BoxCollider2D>();
+            climbTrigger.size = new Vector2(length, 1.25f);
+            climbTrigger.isTrigger = true;
+            climbZone.AddComponent<StairClimbZone>();
+            ParentToFloorSection(climbZone, floorIndex);
+
             Color stairColor = Color.Lerp(PlatformColor, AccentColor, 0.28f);
             for (int stepIndex = 0; stepIndex < StepCount; stepIndex++)
             {
                 float t = (stepIndex + 0.5f) / StepCount;
-                float x = Mathf.Lerp(startX, endX, t);
+                float x = Mathf.Lerp(StartX, EndX, t);
                 float y = Mathf.Lerp(startY, endY, t) - 0.11f;
                 GameObject step = CreateVisualBlock(
                     stairName + " Step " + (stepIndex + 1),
@@ -965,12 +983,12 @@ namespace ReverseBell.Prototype
 
             GameObject lowerPost = CreateVisualBlock(
                 stairName + " Lower Post",
-                new Vector2(startX, startY + 0.48f),
+                new Vector2(StartX, startY + 0.48f),
                 new Vector2(0.16f, 0.95f),
                 AccentColor);
             GameObject upperPost = CreateVisualBlock(
                 stairName + " Upper Post",
-                new Vector2(endX, endY + 0.48f),
+                new Vector2(EndX, endY + 0.48f),
                 new Vector2(0.16f, 0.95f),
                 AccentColor);
             ParentToFloorSection(lowerPost, floorIndex);
@@ -1089,6 +1107,30 @@ namespace ReverseBell.Prototype
             }
 
             return block;
+        }
+
+        private static GameObject CreateOneWayLanding(
+            string objectName,
+            Vector2 position,
+            Vector2 scale,
+            Color color)
+        {
+            var landing = new GameObject(objectName);
+            landing.transform.position = position;
+            landing.transform.localScale = scale;
+
+            var renderer = landing.AddComponent<SpriteRenderer>();
+            renderer.sprite = PrototypeVisuals.WhiteSprite;
+            renderer.color = color;
+
+            var collider = landing.AddComponent<BoxCollider2D>();
+            collider.usedByEffector = true;
+            var effector = landing.AddComponent<PlatformEffector2D>();
+            effector.surfaceArc = 160f;
+
+            var body = landing.AddComponent<Rigidbody2D>();
+            body.bodyType = RigidbodyType2D.Static;
+            return landing;
         }
 
         private static GameObject CreateVisualBlock(
