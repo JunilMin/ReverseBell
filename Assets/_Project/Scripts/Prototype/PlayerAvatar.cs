@@ -9,8 +9,10 @@ namespace ReverseBell.Prototype
     {
         private const float MoveSpeed = 6f;
         private const float JumpSpeed = 12.5f;
-        private const float ParryDuration = 0.12f;
-        private const float ParryCooldown = 0.7f;
+        private const float ParryDuration = 0.26f;
+        private const float PerfectParryDuration = 0.11f;
+        private const float ParryCooldown = 0.55f;
+        private const float BackAttackDotThreshold = -0.3f;
         private const float AttackDuration = 0.28f;
         private const float SpecialDuration = 0.45f;
         private const float HurtDuration = 0.35f;
@@ -214,11 +216,29 @@ namespace ReverseBell.Prototype
             }
 
             float elapsed = Time.time - parryStartedAt;
-            return elapsed <= 0.065f ? ParryGrade.Perfect : ParryGrade.Good;
+            return elapsed <= PerfectParryDuration ? ParryGrade.Perfect : ParryGrade.Good;
         }
 
-        public ParryGrade ConsumeParry()
+        public bool CanGuardFrom(Vector2 sourcePosition)
         {
+            Vector2 directionToSource = sourcePosition - (Vector2)transform.position;
+            if (directionToSource.sqrMagnitude <= 0.0001f)
+            {
+                return true;
+            }
+
+            directionToSource.Normalize();
+            Vector2 facing = Vector2.right * facingDirection;
+            return Vector2.Dot(directionToSource, facing) > BackAttackDotThreshold;
+        }
+
+        public ParryGrade ConsumeParryFrom(Vector2 sourcePosition)
+        {
+            if (!CanGuardFrom(sourcePosition))
+            {
+                return ParryGrade.None;
+            }
+
             ParryGrade grade = EvaluateParry();
             if (grade != ParryGrade.None)
             {
@@ -226,6 +246,12 @@ namespace ReverseBell.Prototype
             }
 
             return grade;
+        }
+
+        public ParryGrade ConsumeParry()
+        {
+            return ConsumeParryFrom(
+                (Vector2)transform.position + (Vector2.right * facingDirection));
         }
 
         private bool IsGrounded()

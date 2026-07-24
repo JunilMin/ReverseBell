@@ -214,11 +214,60 @@ namespace ReverseBell.Tests
             PlayerAvatar player = game.PlayerCharacter;
             Assert.That(player.TryStartParry(), Is.True);
             Assert.That(player.TryStartParry(), Is.False);
-            Assert.That(player.ParryCooldownRemaining, Is.GreaterThan(0.6f));
+            Assert.That(player.ParryCooldownRemaining, Is.GreaterThan(0.45f));
 
-            yield return new WaitForSeconds(0.14f);
+            yield return new WaitForSeconds(0.28f);
             Assert.That(player.EvaluateParry(), Is.EqualTo(ParryGrade.None));
             Assert.That(player.TryStartParry(), Is.False);
+
+            Object.Destroy(root);
+        }
+
+        [UnityTest]
+        public IEnumerator Parry_BlocksFrontAboveAndBelowButNotBehind()
+        {
+            var root = new GameObject("Directional Parry Test Root");
+            var game = root.AddComponent<PrototypeGame>();
+            yield return null;
+
+            PlayerAvatar player = game.PlayerCharacter;
+            Vector2 center = player.transform.position;
+            Assert.That(player.CanGuardFrom(center + Vector2.right), Is.True);
+            Assert.That(player.CanGuardFrom(center + Vector2.up), Is.True);
+            Assert.That(player.CanGuardFrom(center + Vector2.down), Is.True);
+            Assert.That(player.CanGuardFrom(center + Vector2.left), Is.False);
+
+            Assert.That(player.TryStartParry(), Is.True);
+            Assert.That(
+                player.ConsumeParryFrom(center + Vector2.left),
+                Is.EqualTo(ParryGrade.None));
+            Assert.That(player.IsParrying, Is.True);
+            Assert.That(
+                player.ConsumeParryFrom(center + Vector2.up),
+                Is.Not.EqualTo(ParryGrade.None));
+
+            Object.Destroy(root);
+        }
+
+        [UnityTest]
+        public IEnumerator TestMode_GrantsInvincibilityAndDisablesCombatGates()
+        {
+            var root = new GameObject("Test Mode Root");
+            var game = root.AddComponent<PrototypeGame>();
+            yield return null;
+
+            int startingHealth = game.Health;
+            Assert.That(game.IsFloorGateLocked(0), Is.True);
+
+            game.SetTestMode(true);
+            game.TakeDamage(5);
+
+            Assert.That(game.TestModeEnabled, Is.True);
+            Assert.That(game.Health, Is.EqualTo(startingHealth));
+            Assert.That(game.IsFloorGateLocked(0), Is.False);
+
+            game.SetTestMode(false);
+            Assert.That(game.IsFloorGateLocked(0), Is.True);
 
             Object.Destroy(root);
         }
