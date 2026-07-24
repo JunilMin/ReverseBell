@@ -128,7 +128,7 @@ namespace ReverseBell.Prototype
         {
             visual.PlayAttack();
             attackResetPending = true;
-            attackResetAt = Time.time + 0.18f;
+            attackResetAt = Time.time + 0.38f;
 
             if (Vector2.Distance(player.transform.position, transform.position) > attackRange)
             {
