@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 
 namespace ReverseBell.Prototype
 {
-    [RequireComponent(typeof(Rigidbody2D), typeof(BoxCollider2D), typeof(SpriteRenderer))]
+    [RequireComponent(typeof(Rigidbody2D), typeof(CapsuleCollider2D), typeof(SpriteRenderer))]
     public sealed class PlayerAvatar : MonoBehaviour
     {
         private const float MoveSpeed = 6f;
@@ -41,6 +41,16 @@ namespace ReverseBell.Prototype
             body.freezeRotation = true;
             body.gravityScale = 3f;
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            body.interpolation = RigidbodyInterpolation2D.Interpolate;
+
+            CapsuleCollider2D capsule = GetComponent<CapsuleCollider2D>();
+            capsule.size = new Vector2(0.72f, 1.4f);
+            capsule.direction = CapsuleDirection2D.Vertical;
+            capsule.sharedMaterial = new PhysicsMaterial2D("Player Movement")
+            {
+                friction = 0f,
+                bounciness = 0f
+            };
 
             characterVisual = gameObject.AddComponent<HeroSwordsmanVisual>();
 
@@ -117,8 +127,24 @@ namespace ReverseBell.Prototype
 
         private bool IsGrounded()
         {
-            Vector2 origin = (Vector2)transform.position + new Vector2(0f, -0.76f);
-            return Physics2D.Raycast(origin, Vector2.down, 0.12f).collider != null;
+            Vector2 feet = (Vector2)transform.position + new Vector2(0f, -0.71f);
+            return HasGroundBelow(feet + Vector2.left * 0.22f) ||
+                HasGroundBelow(feet) ||
+                HasGroundBelow(feet + Vector2.right * 0.22f);
+        }
+
+        private bool HasGroundBelow(Vector2 origin)
+        {
+            RaycastHit2D[] hits = Physics2D.RaycastAll(origin, Vector2.down, 0.14f);
+            foreach (RaycastHit2D hit in hits)
+            {
+                if (hit.collider != null && hit.collider.gameObject != gameObject)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static float ReadMovement()

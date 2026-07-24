@@ -13,9 +13,16 @@ namespace ReverseBell.Prototype
         private Transform weaponRoot;
         private SpriteRenderer[] bodyRenderers;
         private float facing = -1f;
+        private EnemyWeaponType weaponType;
+        private float attackStartedAt;
+        private bool attacking;
+
+        private const float VisualScale = 1.18f;
+        private const float AttackDuration = 0.36f;
 
         public void Build(EnemyWeaponType weaponType)
         {
+            this.weaponType = weaponType;
             visualRoot = new GameObject("Humanoid Visual").transform;
             visualRoot.SetParent(transform, false);
 
@@ -54,11 +61,19 @@ namespace ReverseBell.Prototype
                 facing = Mathf.Sign(direction);
             }
 
-            visualRoot.localScale = new Vector3(facing, 1f, 1f);
+            visualRoot.localScale = new Vector3(facing * VisualScale, VisualScale, 1f);
         }
 
         public void SetTelegraph(bool active)
         {
+            if (!active)
+            {
+                attacking = false;
+                visualRoot.localPosition = Vector3.zero;
+                visualRoot.localRotation = Quaternion.identity;
+                weaponRoot.localPosition = new Vector3(0.36f, 0.1f, 0f);
+            }
+
             foreach (SpriteRenderer renderer in bodyRenderers)
             {
                 if (renderer.transform.IsChildOf(weaponRoot))
@@ -69,18 +84,58 @@ namespace ReverseBell.Prototype
                 renderer.color = active ? WarningColor : BodyColor;
             }
 
-            weaponRoot.localRotation = Quaternion.Euler(0f, 0f, active ? 42f : 12f);
+            float telegraphAngle = weaponType == EnemyWeaponType.Spear ? 72f : 95f;
+            weaponRoot.localRotation =
+                Quaternion.Euler(0f, 0f, active ? telegraphAngle : 12f);
         }
 
         public void PlayAttack()
         {
-            weaponRoot.localRotation = Quaternion.Euler(0f, 0f, -72f);
+            attacking = true;
+            attackStartedAt = Time.time;
         }
 
         public void ResetAttack()
         {
             SetTelegraph(false);
-            weaponRoot.localRotation = Quaternion.Euler(0f, 0f, 12f);
+        }
+
+        private void Update()
+        {
+            if (!attacking)
+            {
+                return;
+            }
+
+            float progress = Mathf.Clamp01((Time.time - attackStartedAt) / AttackDuration);
+            float strike = Mathf.SmoothStep(0f, 1f, Mathf.Min(progress * 2.4f, 1f));
+            float recovery = progress < 0.58f
+                ? 1f
+                : 1f - Mathf.SmoothStep(0f, 1f, (progress - 0.58f) / 0.42f);
+            float force = strike * recovery;
+
+            visualRoot.localPosition = new Vector3(0.42f * force, 0f, 0f);
+            visualRoot.localRotation = Quaternion.Euler(0f, 0f, -8f * force);
+
+            if (weaponType == EnemyWeaponType.Spear)
+            {
+                weaponRoot.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(72f, -78f, strike));
+                weaponRoot.localPosition = new Vector3(
+                    0.36f + (0.72f * force),
+                    0.1f - (0.12f * force),
+                    0f);
+            }
+            else
+            {
+                float endAngle = weaponType == EnemyWeaponType.Shield ? -100f : -135f;
+                weaponRoot.localRotation =
+                    Quaternion.Euler(0f, 0f, Mathf.Lerp(95f, endAngle, strike));
+            }
+
+            if (progress >= 1f)
+            {
+                ResetAttack();
+            }
         }
 
         private void BuildSword()
@@ -167,4 +222,3 @@ namespace ReverseBell.Prototype
         }
     }
 }
-

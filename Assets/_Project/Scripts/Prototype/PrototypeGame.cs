@@ -297,8 +297,9 @@ namespace ReverseBell.Prototype
             playerObject.transform.position = position;
             playerObject.AddComponent<SpriteRenderer>();
 
-            var collider = playerObject.AddComponent<BoxCollider2D>();
-            collider.size = new Vector2(0.8f, 1.4f);
+            var collider = playerObject.AddComponent<CapsuleCollider2D>();
+            collider.size = new Vector2(0.72f, 1.4f);
+            collider.direction = CapsuleDirection2D.Vertical;
 
             return playerObject.AddComponent<PlayerAvatar>();
         }

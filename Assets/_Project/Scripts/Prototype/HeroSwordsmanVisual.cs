@@ -18,7 +18,7 @@ namespace ReverseBell.Prototype
         private float swordAnimationStartedAt;
         private bool wasUsingSword;
 
-        public bool FacesRight => characterRenderer != null && characterRenderer.flipX;
+        public bool FacesRight => characterRenderer != null && !characterRenderer.flipX;
 
         private void Awake()
         {
@@ -57,7 +57,7 @@ namespace ReverseBell.Prototype
                 facing = Mathf.Sign(movement);
             }
 
-            characterRenderer.flipX = facing > 0f;
+            characterRenderer.flipX = facing < 0f;
 
             if (isUsingSword)
             {
@@ -112,6 +112,7 @@ namespace ReverseBell.Prototype
             }
 
             const float frameSize = 64f;
+            const float pixelsPerUnit = 52f;
             var frames = new Sprite[frameCount];
 
             for (int index = 0; index < frameCount; index++)
@@ -128,8 +129,8 @@ namespace ReverseBell.Prototype
                 frames[index] = Sprite.Create(
                     texture,
                     frameRect,
-                    new Vector2(0.5f, 0.12f),
-                    64f);
+                    new Vector2(0.5f, 0.57f),
+                    pixelsPerUnit);
                 frames[index].name = texture.name + " Frame " + index;
             }
 
