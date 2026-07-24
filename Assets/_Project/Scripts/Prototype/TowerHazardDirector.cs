@@ -19,6 +19,12 @@ namespace ReverseBell.Prototype
             nextSpawnAt = Time.time + 3f;
         }
 
+        public void ResetDirector()
+        {
+            spawnCount = 0;
+            nextSpawnAt = Time.time + 3f;
+        }
+
         private void Update()
         {
             if (game == null || player == null || Time.time < nextSpawnAt)
@@ -33,19 +39,25 @@ namespace ReverseBell.Prototype
                 return;
             }
 
-            SpawnHazard(floor);
+            int volleyCount = Mathf.Clamp(1 + (floor / 18), 1, 3);
+            for (int volleyIndex = 0; volleyIndex < volleyCount; volleyIndex++)
+            {
+                SpawnHazard(floor, volleyIndex);
+            }
             float difficulty = Mathf.InverseLerp(6f, 50f, floor);
-            nextSpawnAt = Time.time + Mathf.Lerp(3.4f, 1.45f, difficulty);
+            nextSpawnAt = Time.time + Mathf.Lerp(3.4f, 1.25f, difficulty);
         }
 
-        private void SpawnHazard(int floor)
+        private void SpawnHazard(int floor, int volleyIndex)
         {
             bool fromLeft = spawnCount % 2 == 0;
             bool isRock = spawnCount % 3 == 2;
             spawnCount++;
 
             float spawnX = fromLeft ? LeftWallInnerEdge : RightWallInnerEdge;
-            float spawnY = player.transform.position.y + Random.Range(-0.9f, 1.2f);
+            float spawnY = player.transform.position.y +
+                Random.Range(-0.9f, 1.2f) +
+                ((volleyIndex - 1) * 0.35f);
             Vector2 origin = new Vector2(spawnX, spawnY);
             Vector2 target = (Vector2)player.transform.position +
                 new Vector2(player.FacingDirection * 0.25f, 0.1f);
