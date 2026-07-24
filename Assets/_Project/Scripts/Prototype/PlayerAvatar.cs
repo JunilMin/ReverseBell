@@ -109,20 +109,43 @@ namespace ReverseBell.Prototype
             ResolveQueuedCombatImpacts();
 
             float movement = ReadMovement();
+            StairClimbZone stair = activeStair != null && activeStair.isActiveAndEnabled
+                ? activeStair
+                : StairClimbZone.FindAt(body.position);
+            if (stair != null && Mathf.Abs(movement) <= 0.05f)
+            {
+                if (IsStairUpHeld())
+                {
+                    movement = stair.RiseDirection;
+                }
+                else if (IsStairDownHeld())
+                {
+                    movement = -stair.RiseDirection;
+                }
+            }
+
             if (Mathf.Abs(movement) > 0.05f)
             {
                 facingDirection = Mathf.Sign(movement);
             }
 
             body.linearVelocity = new Vector2(movement * MoveSpeed, body.linearVelocity.y);
-            if (activeStair != null && Mathf.Abs(movement) > 0.05f)
+            if (stair != null &&
+                Mathf.Abs(movement) > 0.05f &&
+                stair.TryGetStandingY(body.position, out float stairY))
             {
+                body.position = new Vector2(
+                    body.position.x,
+                    Mathf.MoveTowards(
+                        body.position.y,
+                        stairY,
+                        StairClimbSpeed * Time.deltaTime));
                 body.linearVelocity = new Vector2(
                     movement * MoveSpeed,
-                    movement * activeStair.RiseDirection * StairClimbSpeed);
+                    movement * stair.RiseDirection * StairClimbSpeed);
             }
 
-            if (WasJumpPressed() && IsGrounded())
+            if (stair == null && WasJumpPressed() && IsGrounded())
             {
                 body.linearVelocity = new Vector2(body.linearVelocity.x, JumpSpeed);
             }
@@ -310,6 +333,18 @@ namespace ReverseBell.Prototype
                 Keyboard.current.upArrowKey.wasPressedThisFrame;
         }
 
+        private static bool IsStairUpHeld()
+        {
+            return Keyboard.current != null &&
+                Keyboard.current.upArrowKey.isPressed;
+        }
+
+        private static bool IsStairDownHeld()
+        {
+            return Keyboard.current != null &&
+                Keyboard.current.downArrowKey.isPressed;
+        }
+
         private static bool WasAttackPressed()
         {
             return Keyboard.current != null &&
@@ -349,6 +384,64 @@ namespace ReverseBell.Prototype
 
     public sealed class StairClimbZone : MonoBehaviour
     {
-        public float RiseDirection => 1f;
+        private static readonly System.Collections.Generic.List<StairClimbZone> ActiveZones =
+            new System.Collections.Generic.List<StairClimbZone>();
+
+        private Vector2 start;
+        private Vector2 end;
+
+        public float RiseDirection => Mathf.Sign(end.x - start.x);
+
+        public void Configure(Vector2 lowerPoint, Vector2 upperPoint)
+        {
+            start = lowerPoint;
+            end = upperPoint;
+        }
+
+        private void OnEnable()
+        {
+            if (!ActiveZones.Contains(this))
+            {
+                ActiveZones.Add(this);
+            }
+        }
+
+        private void OnDisable()
+        {
+            ActiveZones.Remove(this);
+        }
+
+        public static StairClimbZone FindAt(Vector2 playerPosition)
+        {
+            for (int index = ActiveZones.Count - 1; index >= 0; index--)
+            {
+                StairClimbZone zone = ActiveZones[index];
+                if (zone == null)
+                {
+                    ActiveZones.RemoveAt(index);
+                    continue;
+                }
+
+                if (zone.TryGetStandingY(playerPosition, out _))
+                {
+                    return zone;
+                }
+            }
+
+            return null;
+        }
+
+        public bool TryGetStandingY(Vector2 playerPosition, out float standingY)
+        {
+            float minimumX = Mathf.Min(start.x, end.x) - 0.45f;
+            float maximumX = Mathf.Max(start.x, end.x) + 0.45f;
+            float t = Mathf.InverseLerp(start.x, end.x, playerPosition.x);
+            float surfaceY = Mathf.Lerp(start.y, end.y, t);
+            standingY = surfaceY + 0.72f;
+
+            return playerPosition.x >= minimumX &&
+                playerPosition.x <= maximumX &&
+                Mathf.Abs(playerPosition.y - standingY) <= 1.15f;
+        }
     }
 }

@@ -44,13 +44,15 @@ namespace ReverseBell.Tests
             Assert.That(secondWalkway, Is.Not.Null);
             Assert.That(firstLanding, Is.Not.Null);
             Assert.That(firstRamp, Is.Not.Null);
-            Assert.That(firstWalkway.transform.position.x, Is.EqualTo(-2.7f).Within(0.01f));
-            Assert.That(firstWalkway.transform.localScale.x, Is.EqualTo(9.4f).Within(0.01f));
+            Assert.That(firstWalkway.transform.position.x, Is.EqualTo(-2.4f).Within(0.01f));
+            Assert.That(firstWalkway.transform.localScale.x, Is.EqualTo(9f).Within(0.01f));
             Assert.That(
                 secondWalkway.transform.position.y - firstWalkway.transform.position.y,
                 Is.EqualTo(4.6f).Within(0.01f));
             Assert.That(firstRamp.GetComponent<PolygonCollider2D>(), Is.Not.Null);
             Assert.That(Object.FindFirstObjectByType<StairClimbZone>(), Is.Not.Null);
+            Assert.That(GameObject.Find("Floor 1 Stone Chamber"), Is.Not.Null);
+            Assert.That(GameObject.Find("Floor 1 Stairwell Pillar"), Is.Not.Null);
 
             HeroSwordsmanVisual hero = Object.FindFirstObjectByType<HeroSwordsmanVisual>();
             hero.SetPose(1f, 0f, true, HeroActionState.None);
