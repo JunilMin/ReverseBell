@@ -46,8 +46,8 @@ namespace ReverseBell.Prototype
         {
             Camera mainCamera = ConfigureCamera();
             CreateStage();
-            player.AttackRequested += PerformPlayerAttack;
-            player.SpecialRequested += TryPerformSpecial;
+            player.AttackRequested += HandlePlayerAttackRequested;
+            player.SpecialRequested += HandleSpecialRequested;
             mainCamera.GetComponent<VerticalCameraFollow>().Initialize(player.transform);
 
             rhythmClock = FindFirstObjectByType<RhythmClock>();
@@ -61,6 +61,27 @@ namespace ReverseBell.Prototype
                     enemy.transform.position.x - 1.8f,
                     enemy.transform.position.x + 1.8f);
             }
+        }
+
+        private void OnDestroy()
+        {
+            if (player == null)
+            {
+                return;
+            }
+
+            player.AttackRequested -= HandlePlayerAttackRequested;
+            player.SpecialRequested -= HandleSpecialRequested;
+        }
+
+        private void HandlePlayerAttackRequested(float facingDirection)
+        {
+            PerformPlayerAttack(facingDirection);
+        }
+
+        private void HandleSpecialRequested(float facingDirection)
+        {
+            TryPerformSpecial(facingDirection);
         }
 
         private void Update()
