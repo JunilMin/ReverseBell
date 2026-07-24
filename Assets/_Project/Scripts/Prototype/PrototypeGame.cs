@@ -18,6 +18,8 @@ namespace ReverseBell.Prototype
         private const float TowerTop =
             PlatformStartY + ((PlatformCount - 1) * PlatformSpacing) + 1.9f;
         private const float EnemyStandingOffset = 0.89f;
+        private const int FloorsBelowPlayerToKeepActive = 5;
+        private const int FloorsAbovePlayerToKeepActive = 7;
 
         private readonly float[] platformXPattern = { -5f, 0f, 5f, 0f };
 
@@ -29,6 +31,7 @@ namespace ReverseBell.Prototype
             new Dictionary<int, GameObject>();
         private readonly List<EnemySpawnDefinition> enemySpawnDefinitions =
             new List<EnemySpawnDefinition>();
+        private readonly Transform[] floorSections = new Transform[PlatformCount];
         private RhythmClock rhythmClock;
         private TowerHazardDirector hazardDirector;
         private Transform towerBell;
@@ -55,6 +58,8 @@ namespace ReverseBell.Prototype
 
         public int EnemiesRemaining => enemies.Count;
         public PlayerAvatar PlayerCharacter => player;
+        public int FloorSectionCount => floorSections.Length;
+        public int ActiveFloorSectionCount { get; private set; }
 
         public string Feedback { get; private set; } = "Wait for the enemy attack";
 
@@ -76,6 +81,7 @@ namespace ReverseBell.Prototype
 
             hazardDirector = gameObject.AddComponent<TowerHazardDirector>();
             hazardDirector.Initialize(this, player);
+            UpdateFloorStreaming(true);
         }
 
         private void OnDestroy()
@@ -109,6 +115,7 @@ namespace ReverseBell.Prototype
 
             UpdateCheckpoint();
             UpdateTowerGoal();
+            UpdateFloorStreaming();
 
             if (!towerCleared &&
                 Time.time >= feedbackUntil &&
@@ -355,6 +362,7 @@ namespace ReverseBell.Prototype
                 GroundColor,
                 true);
 
+            CreateFloorSections();
             CreateTowerPlatforms();
             CreateTowerDecorations();
 
@@ -405,6 +413,7 @@ namespace ReverseBell.Prototype
         {
             var enemyObject = new GameObject(enemyName);
             enemyObject.transform.position = position;
+            ParentToFloorSection(enemyObject, floorIndex);
             var enemy = enemyObject.AddComponent<HumanoidMeleeEnemy>();
             enemy.SetWeaponType(weaponType);
             enemy.SetFloorIndex(floorIndex);
@@ -439,10 +448,14 @@ namespace ReverseBell.Prototype
 
         private void RebuildCombatRun()
         {
-            HumanoidMeleeEnemy[] existingEnemies =
-                FindObjectsByType<HumanoidMeleeEnemy>(FindObjectsSortMode.None);
+            HumanoidMeleeEnemy[] existingEnemies = enemies.ToArray();
             foreach (HumanoidMeleeEnemy enemy in existingEnemies)
             {
+                if (enemy == null)
+                {
+                    continue;
+                }
+
                 enemy.gameObject.SetActive(false);
                 Destroy(enemy.gameObject);
             }
@@ -479,6 +492,7 @@ namespace ReverseBell.Prototype
 
             CreateCombatGates();
             hazardDirector?.ResetDirector();
+            UpdateFloorStreaming(true);
 
             if (towerBell != null)
             {
@@ -526,6 +540,7 @@ namespace ReverseBell.Prototype
             var gate = new GameObject("Combat Gate Floor " + (floorIndex + 1));
             gate.transform.position = new Vector3(0f, PlatformY(floorIndex) + 2.1f, 0f);
             gate.transform.localScale = new Vector3(16.2f, 0.18f, 1f);
+            ParentToFloorSection(gate, floorIndex);
 
             var renderer = gate.AddComponent<SpriteRenderer>();
             renderer.sprite = PrototypeVisuals.WhiteSprite;
@@ -556,29 +571,96 @@ namespace ReverseBell.Prototype
                 float x = platformXPattern[index % platformXPattern.Length];
                 float width = index % 4 == 3 ? 6.2f : 5.4f;
 
-                CreateBlock(
+                GameObject platform = CreateBlock(
                     "Tower Platform " + (index + 1),
                     new Vector2(x, y),
                     new Vector2(width, 0.38f),
                     PlatformColor,
                     true);
+                ParentToFloorSection(platform, index);
 
                 if ((index + 1) % 5 == 0)
                 {
-                    CreateVisualBlock(
+                    GameObject banner = CreateVisualBlock(
                         "Checkpoint Banner " + (index + 1),
                         new Vector2(x, y + 0.9f),
                         new Vector2(0.22f, 1.4f),
                         new Color(0.18f, 0.7f, 0.75f));
+                    ParentToFloorSection(banner, index);
                 }
             }
 
-            CreateBlock(
+            GameObject bellChamberFloor = CreateBlock(
                 "Bell Chamber Floor",
                 new Vector2(0f, TowerTop),
                 new Vector2(12f, 0.5f),
                 AccentColor,
                 true);
+            ParentToFloorSection(bellChamberFloor, PlatformCount - 1);
+        }
+
+        private void CreateFloorSections()
+        {
+            for (int index = 0; index < floorSections.Length; index++)
+            {
+                var section = new GameObject("Floor Section " + (index + 1).ToString("00"));
+                section.transform.SetParent(transform, false);
+                floorSections[index] = section.transform;
+            }
+        }
+
+        private void ParentToFloorSection(GameObject target, int floorIndex)
+        {
+            if (target == null ||
+                floorIndex < 0 ||
+                floorIndex >= floorSections.Length ||
+                floorSections[floorIndex] == null)
+            {
+                return;
+            }
+
+            target.transform.SetParent(floorSections[floorIndex], true);
+        }
+
+        private void UpdateFloorStreaming(bool force = false)
+        {
+            if (player == null)
+            {
+                return;
+            }
+
+            int playerFloor = Mathf.Clamp(
+                Mathf.FloorToInt(
+                    (player.transform.position.y - PlatformStartY) / PlatformSpacing),
+                0,
+                PlatformCount - 1);
+            int firstActiveFloor = Mathf.Max(0, playerFloor - FloorsBelowPlayerToKeepActive);
+            int lastActiveFloor = Mathf.Min(
+                PlatformCount - 1,
+                playerFloor + FloorsAbovePlayerToKeepActive);
+            int activeCount = 0;
+
+            for (int index = 0; index < floorSections.Length; index++)
+            {
+                Transform section = floorSections[index];
+                if (section == null)
+                {
+                    continue;
+                }
+
+                bool shouldBeActive = index >= firstActiveFloor && index <= lastActiveFloor;
+                if (force || section.gameObject.activeSelf != shouldBeActive)
+                {
+                    section.gameObject.SetActive(shouldBeActive);
+                }
+
+                if (shouldBeActive)
+                {
+                    activeCount++;
+                }
+            }
+
+            ActiveFloorSectionCount = activeCount;
         }
 
         private static float PlatformY(int index)
