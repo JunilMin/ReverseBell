@@ -250,7 +250,10 @@ namespace ReverseBell.Prototype
                             rowFromBottom * FrameSize,
                             FrameSize,
                             FrameSize),
-                        new Vector2(0.5f, 0.13f),
+                        // The knight's feet sit 89 px above the sheet cell bottom.
+                        // Add the enemy collider's 0.7 world-unit half-height so
+                        // the rendered feet align with the platform under the root.
+                        new Vector2(0.5f, 0.545f),
                         PixelsPerUnit);
                     frames[index].name = textureName + " Frame " + index;
                     index++;

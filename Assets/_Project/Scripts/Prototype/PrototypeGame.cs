@@ -11,10 +11,14 @@ namespace ReverseBell.Prototype
         private static readonly Color PlatformColor = new Color(0.25f, 0.28f, 0.38f);
         private static readonly Color AccentColor = new Color(0.55f, 0.42f, 0.2f);
 
-        private const float TowerTop = 30.8f;
         private const int PlatformCount = 16;
+        private const float PlatformStartY = -1.6f;
+        private const float PlatformSpacing = 2.35f;
+        private const float TowerTop =
+            PlatformStartY + ((PlatformCount - 1) * PlatformSpacing) + 1.9f;
+        private const float EnemyStandingOffset = 0.89f;
 
-        private readonly float[] platformXPattern = { -4.2f, 0f, 4.2f, 0f };
+        private readonly float[] platformXPattern = { -5f, 0f, 5f, 0f };
 
         private PlayerAvatar player;
         private readonly List<HumanoidMeleeEnemy> enemies = new List<HumanoidMeleeEnemy>();
@@ -247,7 +251,7 @@ namespace ReverseBell.Prototype
             }
 
             mainCamera.orthographic = true;
-            mainCamera.orthographicSize = 5.4f;
+            mainCamera.orthographicSize = 6.1f;
             mainCamera.transform.position = new Vector3(0f, 0f, -10f);
             mainCamera.backgroundColor = BackgroundColor;
 
@@ -262,16 +266,16 @@ namespace ReverseBell.Prototype
             float towerCenter = (TowerTop - 4f) * 0.5f;
             float towerHeight = TowerTop + 9f;
 
-            CreateBlock("Ground", new Vector2(0f, -4f), new Vector2(14f, 1f), GroundColor, true);
+            CreateBlock("Ground", new Vector2(0f, -4f), new Vector2(17f, 1f), GroundColor, true);
             CreateBlock(
                 "Left Tower Wall",
-                new Vector2(-7.2f, towerCenter),
+                new Vector2(-8.7f, towerCenter),
                 new Vector2(0.8f, towerHeight),
                 GroundColor,
                 true);
             CreateBlock(
                 "Right Tower Wall",
-                new Vector2(7.2f, towerCenter),
+                new Vector2(8.7f, towerCenter),
                 new Vector2(0.8f, towerHeight),
                 GroundColor,
                 true);
@@ -279,10 +283,16 @@ namespace ReverseBell.Prototype
             CreateTowerPlatforms();
             CreateTowerDecorations();
 
-            player = CreatePlayer(new Vector2(-4.8f, -2.8f));
-            CreateEnemy("Sword Guard", new Vector2(4.2f, -2.8f), EnemyWeaponType.Sword);
-            CreateEnemy("Spear Guard", new Vector2(-4.2f, 7.4f), EnemyWeaponType.Spear);
-            CreateEnemy("Shield Guard", new Vector2(-4.2f, 15.6f), EnemyWeaponType.Shield);
+            player = CreatePlayer(new Vector2(-5.5f, -2.8f));
+            CreateEnemy("Sword Guard", new Vector2(5f, -2.8f), EnemyWeaponType.Sword);
+            CreateEnemy(
+                "Spear Guard",
+                new Vector2(-5f, PlatformY(4) + EnemyStandingOffset),
+                EnemyWeaponType.Spear);
+            CreateEnemy(
+                "Shield Guard",
+                new Vector2(-5f, PlatformY(8) + EnemyStandingOffset),
+                EnemyWeaponType.Shield);
 
             towerBell = CreateVisualBlock(
                 "Tower Bell",
@@ -317,9 +327,9 @@ namespace ReverseBell.Prototype
         {
             for (int index = 0; index < PlatformCount; index++)
             {
-                float y = -1.7f + (index * 2.05f);
+                float y = PlatformY(index);
                 float x = platformXPattern[index % platformXPattern.Length];
-                float width = index % 4 == 3 ? 4.8f : 4.2f;
+                float width = index % 4 == 3 ? 6.2f : 5.4f;
 
                 CreateBlock(
                     "Tower Platform " + (index + 1),
@@ -341,24 +351,29 @@ namespace ReverseBell.Prototype
             CreateBlock(
                 "Bell Chamber Floor",
                 new Vector2(0f, TowerTop),
-                new Vector2(10f, 0.5f),
+                new Vector2(12f, 0.5f),
                 AccentColor,
                 true);
         }
 
+        private static float PlatformY(int index)
+        {
+            return PlatformStartY + (index * PlatformSpacing);
+        }
+
         private static void CreateTowerDecorations()
         {
-            for (int floor = 0; floor < 10; floor++)
+            for (int floor = 0; floor < 11; floor++)
             {
-                float y = -1f + (floor * 3.2f);
+                float y = -1f + (floor * 3.55f);
                 CreateVisualBlock(
                     "Left Window " + floor,
-                    new Vector2(-6.65f, y),
+                    new Vector2(-8.15f, y),
                     new Vector2(0.35f, 1.2f),
                     new Color(0.12f, 0.3f, 0.46f));
                 CreateVisualBlock(
                     "Right Window " + floor,
-                    new Vector2(6.65f, y + 1.6f),
+                    new Vector2(8.15f, y + 1.78f),
                     new Vector2(0.35f, 1.2f),
                     new Color(0.12f, 0.3f, 0.46f));
             }
@@ -410,7 +425,7 @@ namespace ReverseBell.Prototype
         private void UpdateCheckpoint()
         {
             int reachedLevel = Mathf.Clamp(
-                Mathf.FloorToInt((player.transform.position.y + 1.7f) / 2.05f),
+                Mathf.FloorToInt((player.transform.position.y - PlatformStartY) / PlatformSpacing),
                 0,
                 PlatformCount);
             int reachedCheckpoint = reachedLevel / 5;
@@ -423,7 +438,7 @@ namespace ReverseBell.Prototype
             checkpointLevel = reachedCheckpoint;
             int platformIndex = Mathf.Min((checkpointLevel * 5) - 1, PlatformCount - 1);
             float checkpointX = platformXPattern[platformIndex % platformXPattern.Length];
-            float checkpointY = -1.7f + (platformIndex * 2.05f) + 1.1f;
+            float checkpointY = PlatformY(platformIndex) + 1.1f;
             player.SetCheckpoint(new Vector2(checkpointX, checkpointY));
             Feedback = "CHECKPOINT " + checkpointLevel;
             feedbackUntil = Time.time + 1.2f;
@@ -450,7 +465,9 @@ namespace ReverseBell.Prototype
 
         private float GetFallLimit()
         {
-            return checkpointLevel == 0 ? -7f : (checkpointLevel * 10.25f) - 8f;
+            return checkpointLevel == 0
+                ? -7f
+                : (checkpointLevel * PlatformSpacing * 5f) - 8f;
         }
 
         private void OnGUI()
@@ -469,7 +486,7 @@ namespace ReverseBell.Prototype
 
             string beatText = rhythmClock == null ? "-" : (rhythmClock.CurrentBeat + 1).ToString();
             int floor = Mathf.Clamp(
-                Mathf.FloorToInt((player.transform.position.y + 4f) / 2.05f) + 1,
+                Mathf.FloorToInt((player.transform.position.y + 4f) / PlatformSpacing) + 1,
                 1,
                 PlatformCount + 1);
             GUI.Label(
