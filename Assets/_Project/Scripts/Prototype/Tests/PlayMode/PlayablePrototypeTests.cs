@@ -356,6 +356,10 @@ namespace ReverseBell.Tests
 
             Assert.That(game.IsFloorGateLocked(0), Is.True);
             Assert.That(game.GetEnemyCountOnFloor(48), Is.EqualTo(5));
+            GameObject firstGate = GameObject.Find("Combat Gate Floor 1");
+            Assert.That(firstGate, Is.Not.Null);
+            Assert.That(firstGate.transform.localScale.x, Is.LessThan(0.3f));
+            Assert.That(firstGate.transform.localScale.y, Is.GreaterThan(3f));
 
             HumanoidMeleeEnemy groundEnemy = game.GetEnemy(EnemyWeaponType.Sword);
             groundEnemy.ReceivePlayerAttack(groundEnemy.MaxHealth);

@@ -808,8 +808,11 @@ namespace ReverseBell.Prototype
         private void CreateCombatGate(int floorIndex)
         {
             var gate = new GameObject("Combat Gate Floor " + (floorIndex + 1));
-            gate.transform.position = new Vector3(0f, PlatformY(floorIndex) + 2.1f, 0f);
-            gate.transform.localScale = new Vector3(16.2f, 0.18f, 1f);
+            gate.transform.position = new Vector3(
+                1.96f,
+                PlatformY(floorIndex) + 1.72f,
+                0f);
+            gate.transform.localScale = new Vector3(0.24f, 3.05f, 1f);
             ParentToFloorSection(gate, floorIndex);
 
             var renderer = gate.AddComponent<SpriteRenderer>();
