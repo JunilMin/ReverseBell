@@ -55,7 +55,9 @@ namespace ReverseBell.Prototype
             CreateStage();
             player.AttackRequested += HandlePlayerAttackRequested;
             player.SpecialRequested += HandleSpecialRequested;
-            mainCamera.GetComponent<VerticalCameraFollow>().Initialize(player.transform);
+            mainCamera.GetComponent<VerticalCameraFollow>().Initialize(
+                player.transform,
+                TowerTop + 1.2f);
 
             rhythmClock = FindFirstObjectByType<RhythmClock>();
             foreach (HumanoidMeleeEnemy enemy in enemies)
