@@ -12,7 +12,7 @@ namespace ReverseBell.Prototype
 
         private Rigidbody2D body;
         private SpriteRenderer parryRenderer;
-        private ThickStickmanVisual stickmanVisual;
+        private HeroSwordsmanVisual characterVisual;
         private Vector2 checkpoint = new Vector2(-4.8f, -2.8f);
         private float parryStartedAt = float.NegativeInfinity;
         private float parryUntil;
@@ -26,7 +26,7 @@ namespace ReverseBell.Prototype
             body.gravityScale = 3f;
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
 
-            stickmanVisual = gameObject.AddComponent<ThickStickmanVisual>();
+            characterVisual = gameObject.AddComponent<HeroSwordsmanVisual>();
 
             var parryObject = new GameObject("Parry Flash");
             parryObject.transform.SetParent(transform, false);
@@ -55,7 +55,7 @@ namespace ReverseBell.Prototype
             }
 
             parryRenderer.enabled = IsParrying;
-            stickmanVisual.SetPose(movement, body.linearVelocity.y, IsGrounded(), IsParrying);
+            characterVisual.SetPose(movement, body.linearVelocity.y, IsGrounded(), IsParrying);
         }
 
         public void ResetPosition()

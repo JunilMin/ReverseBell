@@ -1,0 +1,689 @@
+fileFormatVersion: 2
+guid: 59e721d465030c54eb69620628935281
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 8178728044346973927
+    second: HurtAndDie_0
+  - first:
+      213: -6784178899809559772
+    second: HurtAndDie_1
+  - first:
+      213: 4031737315589494468
+    second: HurtAndDie_2
+  - first:
+      213: 8631368974305059244
+    second: HurtAndDie_3
+  - first:
+      213: -531655758717555749
+    second: HurtAndDie_4
+  - first:
+      213: -6007638396077778539
+    second: HurtAndDie_5
+  - first:
+      213: -2350964912748813122
+    second: HurtAndDie_6
+  - first:
+      213: -8637493094799792127
+    second: HurtAndDie_7
+  - first:
+      213: 502529902729902678
+    second: HurtAndDie_8
+  - first:
+      213: -4677754801770621733
+    second: HurtAndDie_9
+  - first:
+      213: -7434939457984170961
+    second: HurtAndDie_10
+  - first:
+      213: 3334606225863826750
+    second: HurtAndDie_11
+  - first:
+      213: -8201272463914376773
+    second: HurtAndDie_12
+  - first:
+      213: -3652273115139499150
+    second: HurtAndDie_13
+  - first:
+      213: 1136393941840836084
+    second: HurtAndDie_14
+  - first:
+      213: 7822101498171190223
+    second: HurtAndDie_15
+  - first:
+      213: -633958284315575865
+    second: HurtAndDie_16
+  - first:
+      213: -6956228233154960892
+    second: HurtAndDie_17
+  - first:
+      213: -6946990455473070369
+    second: HurtAndDie_18
+  - first:
+      213: 3397417519186870527
+    second: HurtAndDie_19
+  - first:
+      213: 6572231737542928001
+    second: HurtAndDie_20
+  - first:
+      213: 8237747095187201066
+    second: HurtAndDie_21
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: HurtAndDie_0
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 191
+        width: 36
+        height: 51
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7ee93d5d2dda08170800000000000000
+      internalID: 8178728044346973927
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_1
+      rect:
+        serializedVersion: 2
+        x: 76
+        y: 191
+        width: 36
+        height: 51
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 42b96281c31c9d1a0800000000000000
+      internalID: -6784178899809559772
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_2
+      rect:
+        serializedVersion: 2
+        x: 140
+        y: 195
+        width: 36
+        height: 51
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4c6166b3abb93f730800000000000000
+      internalID: 4031737315589494468
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_3
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 135
+        width: 36
+        height: 51
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ca1e7c6e958c8c770800000000000000
+      internalID: 8631368974305059244
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_4
+      rect:
+        serializedVersion: 2
+        x: 78
+        y: 139
+        width: 35
+        height: 43
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bdb69de77ed2f98f0800000000000000
+      internalID: -531655758717555749
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_5
+      rect:
+        serializedVersion: 2
+        x: 139
+        y: 139
+        width: 41
+        height: 43
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 59959c665b490aca0800000000000000
+      internalID: -6007638396077778539
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_6
+      rect:
+        serializedVersion: 2
+        x: 20
+        y: 85
+        width: 23
+        height: 22
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eb423382ed1bf5fd0800000000000000
+      internalID: -2350964912748813122
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_7
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 82
+        width: 28
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 108a19e2bc5712880800000000000000
+      internalID: -8637493094799792127
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_8
+      rect:
+        serializedVersion: 2
+        x: 142
+        y: 99
+        width: 14
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 65a3a35b84859f600800000000000000
+      internalID: 502529902729902678
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_9
+      rect:
+        serializedVersion: 2
+        x: 155
+        y: 91
+        width: 10
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bd49516aac6451fb0800000000000000
+      internalID: -4677754801770621733
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_10
+      rect:
+        serializedVersion: 2
+        x: 164
+        y: 98
+        width: 14
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f24715874f9c1d890800000000000000
+      internalID: -7434939457984170961
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_11
+      rect:
+        serializedVersion: 2
+        x: 70
+        y: 49
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e3d5b66e1b6e64e20800000000000000
+      internalID: 3334606225863826750
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_12
+      rect:
+        serializedVersion: 2
+        x: 112
+        y: 49
+        width: 26
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bb1e032752a3f2e80800000000000000
+      internalID: -8201272463914376773
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_13
+      rect:
+        serializedVersion: 2
+        x: 142
+        y: 78
+        width: 15
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 27b966dc3f4805dc0800000000000000
+      internalID: -3652273115139499150
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_14
+      rect:
+        serializedVersion: 2
+        x: 164
+        y: 55
+        width: 23
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4f5345ce44845cf00800000000000000
+      internalID: 1136393941840836084
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_15
+      rect:
+        serializedVersion: 2
+        x: 13
+        y: 42
+        width: 9
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fcb6b8b8edfad8c60800000000000000
+      internalID: 7822101498171190223
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_16
+      rect:
+        serializedVersion: 2
+        x: 43
+        y: 42
+        width: 9
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7c934fc9c4ab337f0800000000000000
+      internalID: -633958284315575865
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_17
+      rect:
+        serializedVersion: 2
+        x: 28
+        y: 28
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 40261421743867f90800000000000000
+      internalID: -6956228233154960892
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_18
+      rect:
+        serializedVersion: 2
+        x: 14
+        y: 13
+        width: 9
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fde9f7bccf4579f90800000000000000
+      internalID: -6946990455473070369
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_19
+      rect:
+        serializedVersion: 2
+        x: 42
+        y: 14
+        width: 9
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ff082d0cb3d062f20800000000000000
+      internalID: 3397417519186870527
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_20
+      rect:
+        serializedVersion: 2
+        x: 70
+        y: 4
+        width: 9
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1866bc1b1f1453b50800000000000000
+      internalID: 6572231737542928001
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HurtAndDie_21
+      rect:
+        serializedVersion: 2
+        x: 111
+        y: 3
+        width: 76
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a2c932e665b525270800000000000000
+      internalID: 8237747095187201066
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      HurtAndDie_0: 8178728044346973927
+      HurtAndDie_1: -6784178899809559772
+      HurtAndDie_10: -7434939457984170961
+      HurtAndDie_11: 3334606225863826750
+      HurtAndDie_12: -8201272463914376773
+      HurtAndDie_13: -3652273115139499150
+      HurtAndDie_14: 1136393941840836084
+      HurtAndDie_15: 7822101498171190223
+      HurtAndDie_16: -633958284315575865
+      HurtAndDie_17: -6956228233154960892
+      HurtAndDie_18: -6946990455473070369
+      HurtAndDie_19: 3397417519186870527
+      HurtAndDie_2: 4031737315589494468
+      HurtAndDie_20: 6572231737542928001
+      HurtAndDie_21: 8237747095187201066
+      HurtAndDie_3: 8631368974305059244
+      HurtAndDie_4: -531655758717555749
+      HurtAndDie_5: -6007638396077778539
+      HurtAndDie_6: -2350964912748813122
+      HurtAndDie_7: -8637493094799792127
+      HurtAndDie_8: 502529902729902678
+      HurtAndDie_9: -4677754801770621733
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
