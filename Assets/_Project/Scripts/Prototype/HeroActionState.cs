@@ -8,4 +8,18 @@ namespace ReverseBell.Prototype
         Special,
         Hurt
     }
+
+    public enum TowerSkillId
+    {
+        SwordMastery,
+        IronWill,
+        ResonantGuard,
+        ArcaneEdge,
+        BloodOath,
+        ResonanceSlash,
+        HealingBell,
+        DemonBreaker,
+        TimeAegis,
+        Execution
+    }
 }

@@ -19,6 +19,7 @@ namespace ReverseBell.Prototype
         private float stunnedUntil;
         private int attackDamage;
         private WorldHealthBar healthBar;
+        private int bossTier;
 
         public int Health { get; private set; }
 
@@ -27,6 +28,7 @@ namespace ReverseBell.Prototype
         public EnemyWeaponType WeaponType => weaponType;
         public bool IsStunned => Time.time < stunnedUntil;
         public int FloorIndex { get; private set; }
+        public bool IsBoss => bossTier > 0;
 
         public void SetWeaponType(EnemyWeaponType type)
         {
@@ -36,6 +38,11 @@ namespace ReverseBell.Prototype
         public void SetFloorIndex(int floorIndex)
         {
             FloorIndex = floorIndex;
+        }
+
+        public void SetBossTier(int tier)
+        {
+            bossTier = Mathf.Max(0, tier);
         }
 
         public void Initialize(
@@ -59,6 +66,10 @@ namespace ReverseBell.Prototype
                 EnemyWeaponType.Spear => 15,
                 _ => 12
             };
+            if (IsBoss)
+            {
+                MaxHealth = 45 + (bossTier * 15);
+            }
             Health = MaxHealth;
             attackRange = type == EnemyWeaponType.Spear ? 1.9f : 1.25f;
             moveSpeed = type == EnemyWeaponType.Shield ? 1.6f : 2.2f;
@@ -68,6 +79,12 @@ namespace ReverseBell.Prototype
                 EnemyWeaponType.Spear => 3,
                 _ => 2
             };
+            if (IsBoss)
+            {
+                attackDamage += 2 + bossTier;
+                attackRange = Mathf.Max(attackRange, 1.75f);
+                transform.localScale = Vector3.one * (1.35f + (bossTier * 0.08f));
+            }
 
             GetComponent<BoxCollider2D>().size = new Vector2(0.8f, 1.4f);
             GetComponent<BoxCollider2D>().isTrigger = true;
@@ -135,7 +152,11 @@ namespace ReverseBell.Prototype
             }
 
             long beatInBar = beat % 4;
-            if (beatInBar == 1)
+            if (IsBoss && beatInBar == 0)
+            {
+                LaunchDemonBolt();
+            }
+            else if (beatInBar == 1)
             {
                 visual.SetTelegraph(true);
             }
@@ -143,6 +164,16 @@ namespace ReverseBell.Prototype
             {
                 PerformAttack();
             }
+        }
+
+        private void LaunchDemonBolt()
+        {
+            Vector2 origin = (Vector2)transform.position + new Vector2(0f, 0.35f);
+            Vector2 direction = ((Vector2)player.transform.position - origin).normalized;
+            var boltObject = new GameObject("Demon Bolt");
+            boltObject.transform.position = origin;
+            WallTrapProjectile bolt = boltObject.AddComponent<WallTrapProjectile>();
+            bolt.Initialize(game, player, direction, 5.5f + bossTier, 2 + bossTier, true);
         }
 
         private bool PlayerIsInCombatLane()
