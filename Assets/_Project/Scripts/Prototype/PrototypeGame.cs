@@ -15,7 +15,7 @@ namespace ReverseBell.Prototype
         private const int PlatformCount = 50;
         private const int PlayerMaximumHealth = 10;
         private const float PlatformStartY = -1.6f;
-        private const float PlatformSpacing = 2.35f;
+        private const float PlatformSpacing = 3.35f;
         private const float TowerTop =
             PlatformStartY + ((PlatformCount - 1) * PlatformSpacing) + 1.9f;
         private const float EnemyStandingOffset = 0.89f;
@@ -33,6 +33,9 @@ namespace ReverseBell.Prototype
         private readonly List<EnemySpawnDefinition> enemySpawnDefinitions =
             new List<EnemySpawnDefinition>();
         private readonly Transform[] floorSections = new Transform[PlatformCount];
+        private readonly Dictionary<int, Transform> skillShrines =
+            new Dictionary<int, Transform>();
+        private readonly HashSet<TowerSkillId> unlockedSkills = new HashSet<TowerSkillId>();
         private RhythmClock rhythmClock;
         private TowerHazardDirector hazardDirector;
         private Transform towerBell;
@@ -44,11 +47,18 @@ namespace ReverseBell.Prototype
         private float feedbackUntil;
         private WorldHealthBar playerHealthBar;
         private float damageInvulnerableUntil;
+        private Transform finalBossPortal;
+        private bool skillMenuOpen;
+        private bool finalBossSpawned;
+        private TowerSkillId equippedActiveSkill = TowerSkillId.ResonanceSlash;
 
         public int Health { get; private set; } = PlayerMaximumHealth;
         public int MaxHealth => PlayerMaximumHealth;
         public int RevivesRemaining { get; private set; } = 3;
         public bool TestModeEnabled { get; private set; }
+        public int SkillPoints { get; private set; }
+        public bool SkillMenuOpen => skillMenuOpen;
+        public TowerSkillId EquippedActiveSkill => equippedActiveSkill;
 
         public int Score { get; private set; }
 
@@ -67,13 +77,14 @@ namespace ReverseBell.Prototype
 
         private void Awake()
         {
+            unlockedSkills.Add(TowerSkillId.ResonanceSlash);
             Camera mainCamera = ConfigureCamera();
             CreateStage();
             player.AttackRequested += HandlePlayerAttackRequested;
             player.SpecialRequested += HandleSpecialRequested;
             mainCamera.GetComponent<VerticalCameraFollow>().Initialize(
                 player.transform,
-                TowerTop + 1.2f);
+                TowerTop + 16f);
 
             rhythmClock = FindFirstObjectByType<RhythmClock>();
             foreach (HumanoidMeleeEnemy enemy in enemies)
@@ -88,6 +99,7 @@ namespace ReverseBell.Prototype
 
         private void OnDestroy()
         {
+            Time.timeScale = 1f;
             if (player == null)
             {
                 return;
@@ -109,9 +121,25 @@ namespace ReverseBell.Prototype
 
         private void Update()
         {
+            if (skillMenuOpen)
+            {
+                if (Keyboard.current != null &&
+                    (Keyboard.current.eKey.wasPressedThisFrame ||
+                     Keyboard.current.escapeKey.wasPressedThisFrame))
+                {
+                    CloseSkillMenu();
+                }
+                return;
+            }
+
             if (Keyboard.current != null && Keyboard.current.f4Key.wasPressedThisFrame)
             {
                 SetTestMode(!TestModeEnabled);
+            }
+
+            if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+            {
+                TryInteract();
             }
 
             if (player.transform.position.y < GetFallLimit())
@@ -120,7 +148,6 @@ namespace ReverseBell.Prototype
                 TakeDamage(2);
             }
 
-            UpdateCheckpoint();
             UpdateTowerGoal();
             UpdateFloorStreaming();
 
@@ -139,6 +166,10 @@ namespace ReverseBell.Prototype
             bool isPerfect = grade == ParryGrade.Perfect;
             Score += isPerfect ? 150 + (Combo * 10) : 75 + (Combo * 5);
             ResonancePoints = Mathf.Min(12, ResonancePoints + (isPerfect ? 2 : 1));
+            if (unlockedSkills.Contains(TowerSkillId.ResonantGuard))
+            {
+                ResonancePoints = Mathf.Min(12, ResonancePoints + 1);
+            }
             Feedback = isPerfect ? "PERFECT PARRY!" : "GOOD PARRY";
             feedbackUntil = Time.time + 0.8f;
 
@@ -153,6 +184,12 @@ namespace ReverseBell.Prototype
             feedbackUntil = Time.time + 0.65f;
         }
 
+        private void Heal(int amount)
+        {
+            Health = Mathf.Min(PlayerMaximumHealth, Health + Mathf.Max(0, amount));
+            playerHealthBar?.SetHealth(Health, PlayerMaximumHealth);
+        }
+
         public void RegisterEnemyDefeat(HumanoidMeleeEnemy enemy)
         {
             enemies.Remove(enemy);
@@ -165,8 +202,29 @@ namespace ReverseBell.Prototype
                 }
             }
 
-            Score += 500;
-            Feedback = enemy.WeaponType.ToString().ToUpperInvariant() + " GUARD DEFEATED";
+            if (enemy.IsBoss)
+            {
+                SkillPoints++;
+                Score += 2500;
+                Feedback = "DEMON BOSS DEFEATED - SKILL POINT +1";
+                if (finalBossSpawned && enemy.FloorIndex == PlatformCount - 1)
+                {
+                    towerCleared = true;
+                    Score += 10000;
+                    Feedback = "DEMON KNIGHT DEFEATED - TOWER COMPLETE!";
+                    feedbackUntil = float.PositiveInfinity;
+                }
+            }
+            else
+            {
+                Score += 500;
+                Feedback = enemy.WeaponType.ToString().ToUpperInvariant() + " GUARD DEFEATED";
+            }
+
+            if (unlockedSkills.Contains(TowerSkillId.BloodOath))
+            {
+                Heal(1);
+            }
             feedbackUntil = Time.time + 1.2f;
         }
 
@@ -184,7 +242,8 @@ namespace ReverseBell.Prototype
                 return false;
             }
 
-            target.ReceivePlayerAttack(3);
+            int damage = 3 + (unlockedSkills.Contains(TowerSkillId.SwordMastery) ? 2 : 0);
+            target.ReceivePlayerAttack(damage);
             Score += 50;
             Feedback = "SWORD HIT";
             feedbackUntil = Time.time + 0.45f;
@@ -201,18 +260,49 @@ namespace ReverseBell.Prototype
             }
 
             ResonancePoints = 0;
+            if (equippedActiveSkill == TowerSkillId.HealingBell)
+            {
+                Heal(5);
+                Feedback = "HEALING BELL!";
+                feedbackUntil = Time.time + 1f;
+                return true;
+            }
+
+            if (equippedActiveSkill == TowerSkillId.TimeAegis)
+            {
+                damageInvulnerableUntil = Time.time + 3f;
+                Feedback = "TIME AEGIS - 3 SECOND GUARD";
+                feedbackUntil = Time.time + 1f;
+                return true;
+            }
+
             HumanoidMeleeEnemy[] targets = enemies.ToArray();
             int hitCount = 0;
+            float range = equippedActiveSkill == TowerSkillId.DemonBreaker ? 7f : 4f;
+            int specialDamage = equippedActiveSkill switch
+            {
+                TowerSkillId.DemonBreaker => 12,
+                TowerSkillId.Execution => 18,
+                _ => 8
+            };
+            if (unlockedSkills.Contains(TowerSkillId.ArcaneEdge))
+            {
+                specialDamage += 4;
+            }
             foreach (HumanoidMeleeEnemy enemy in targets)
             {
                 if (enemy == null ||
-                    Vector2.Distance(player.transform.position, enemy.transform.position) > 4f)
+                    Vector2.Distance(player.transform.position, enemy.transform.position) > range)
                 {
                     continue;
                 }
 
-                enemy.ReceivePlayerAttack(8);
+                enemy.ReceivePlayerAttack(specialDamage);
                 hitCount++;
+                if (equippedActiveSkill == TowerSkillId.Execution)
+                {
+                    break;
+                }
             }
 
             Score += hitCount * 150;
@@ -284,7 +374,10 @@ namespace ReverseBell.Prototype
                 return;
             }
 
-            Health = Mathf.Max(0, Health - Mathf.Max(1, amount));
+            int reducedDamage = unlockedSkills.Contains(TowerSkillId.IronWill)
+                ? Mathf.Max(1, amount - 1)
+                : Mathf.Max(1, amount);
+            Health = Mathf.Max(0, Health - reducedDamage);
             Combo = 0;
             ResonancePoints = Mathf.Max(0, ResonancePoints - 3);
             Feedback = "DAMAGE TAKEN";
@@ -390,13 +483,17 @@ namespace ReverseBell.Prototype
                 EnemyWeaponType.Shield,
                 8);
             CreateUpperTowerEnemies();
+            CreateDemonBosses();
             CreateCombatGates();
+            CreateSkillShrines();
+            CreateFinalBossArena();
 
             towerBell = CreateVisualBlock(
-                "Tower Bell",
+                "Final Boss Portal",
                 new Vector2(0f, TowerTop + 1.2f),
                 new Vector2(1.4f, 1.8f),
                 new Color(1f, 0.72f, 0.16f)).transform;
+            finalBossPortal = towerBell;
         }
 
         private static PlayerAvatar CreatePlayer(Vector2 position)
@@ -417,7 +514,8 @@ namespace ReverseBell.Prototype
             Vector2 position,
             EnemyWeaponType weaponType,
             int floorIndex,
-            bool recordSpawn = true)
+            bool recordSpawn = true,
+            int bossTier = 0)
         {
             var enemyObject = new GameObject(enemyName);
             enemyObject.transform.position = position;
@@ -425,6 +523,7 @@ namespace ReverseBell.Prototype
             var enemy = enemyObject.AddComponent<HumanoidMeleeEnemy>();
             enemy.SetWeaponType(weaponType);
             enemy.SetFloorIndex(floorIndex);
+            enemy.SetBossTier(bossTier);
             enemies.Add(enemy);
 
             if (!enemiesByFloor.TryGetValue(floorIndex, out List<HumanoidMeleeEnemy> floorEnemies))
@@ -437,7 +536,12 @@ namespace ReverseBell.Prototype
             if (recordSpawn)
             {
                 enemySpawnDefinitions.Add(
-                    new EnemySpawnDefinition(enemyName, position, weaponType, floorIndex));
+                    new EnemySpawnDefinition(
+                        enemyName,
+                        position,
+                        weaponType,
+                        floorIndex,
+                        bossTier));
             }
 
             return enemy;
@@ -486,6 +590,7 @@ namespace ReverseBell.Prototype
             enemies.Clear();
             enemiesByFloor.Clear();
             combatGates.Clear();
+            finalBossSpawned = false;
 
             foreach (EnemySpawnDefinition spawn in enemySpawnDefinitions)
             {
@@ -494,7 +599,8 @@ namespace ReverseBell.Prototype
                     spawn.Position,
                     spawn.WeaponType,
                     spawn.FloorIndex,
-                    false);
+                    false,
+                    spawn.BossTier);
                 InitializeEnemy(enemy);
             }
 
@@ -533,6 +639,162 @@ namespace ReverseBell.Prototype
                         floorIndex);
                 }
             }
+        }
+
+        private void CreateDemonBosses()
+        {
+            int[] bossFloors = { 9, 19, 29, 39 };
+            for (int index = 0; index < bossFloors.Length; index++)
+            {
+                int floorIndex = bossFloors[index];
+                float platformX = platformXPattern[floorIndex % platformXPattern.Length];
+                CreateEnemy(
+                    "Demon Warden Floor " + (floorIndex + 1),
+                    new Vector2(platformX, PlatformY(floorIndex) + EnemyStandingOffset),
+                    EnemyWeaponType.Shield,
+                    floorIndex,
+                    true,
+                    index + 1);
+            }
+        }
+
+        private void CreateSkillShrines()
+        {
+            int[] shrineFloors = { 9, 19, 29, 39 };
+            foreach (int floorIndex in shrineFloors)
+            {
+                float x = platformXPattern[floorIndex % platformXPattern.Length];
+                GameObject shrine = CreateVisualBlock(
+                    "Skill Shrine Floor " + (floorIndex + 1),
+                    new Vector2(x + 1.8f, PlatformY(floorIndex) + 0.72f),
+                    new Vector2(0.65f, 1.25f),
+                    new Color(0.62f, 0.22f, 0.9f));
+                shrine.GetComponent<SpriteRenderer>().sortingOrder = 2;
+                ParentToFloorSection(shrine, floorIndex);
+                skillShrines.Add(floorIndex, shrine.transform);
+            }
+        }
+
+        private void CreateFinalBossArena()
+        {
+            float arenaY = TowerTop + 11f;
+            GameObject floor = CreateBlock(
+                "Final Boss Arena Floor",
+                new Vector2(0f, arenaY - 2f),
+                new Vector2(15f, 0.65f),
+                GroundColor,
+                true);
+            GameObject leftWall = CreateBlock(
+                "Final Boss Arena Left Wall",
+                new Vector2(-7.4f, arenaY + 1f),
+                new Vector2(0.6f, 6.5f),
+                GroundColor,
+                true);
+            GameObject rightWall = CreateBlock(
+                "Final Boss Arena Right Wall",
+                new Vector2(7.4f, arenaY + 1f),
+                new Vector2(0.6f, 6.5f),
+                GroundColor,
+                true);
+            ParentToFloorSection(floor, PlatformCount - 1);
+            ParentToFloorSection(leftWall, PlatformCount - 1);
+            ParentToFloorSection(rightWall, PlatformCount - 1);
+        }
+
+        private void TryInteract()
+        {
+            foreach (KeyValuePair<int, Transform> shrine in skillShrines)
+            {
+                if (shrine.Value == null ||
+                    Vector2.Distance(player.transform.position, shrine.Value.position) > 1.8f)
+                {
+                    continue;
+                }
+
+                if (GetEnemyCountOnFloor(shrine.Key) > 0 && !TestModeEnabled)
+                {
+                    Feedback = "DEFEAT THE DEMON BOSS FIRST";
+                    feedbackUntil = Time.time + 1f;
+                    return;
+                }
+
+                ActivateCheckpoint(shrine.Key);
+                OpenSkillMenu();
+                return;
+            }
+
+            if (finalBossPortal != null &&
+                Vector2.Distance(player.transform.position, finalBossPortal.position) <= 2f)
+            {
+                EnterFinalBossRoom();
+                return;
+            }
+
+            Feedback = "NOTHING TO INTERACT WITH";
+            feedbackUntil = Time.time + 0.5f;
+        }
+
+        private void OpenSkillMenu()
+        {
+            skillMenuOpen = true;
+            Time.timeScale = 0f;
+            Feedback = "SKILL ALTAR";
+        }
+
+        private void CloseSkillMenu()
+        {
+            skillMenuOpen = false;
+            Time.timeScale = 1f;
+            Feedback = "SKILL MENU CLOSED";
+            feedbackUntil = Time.time + 0.7f;
+        }
+
+        private void EnterFinalBossRoom()
+        {
+            float arenaY = TowerTop + 11f;
+            player.RespawnAt(new Vector2(-4.5f, arenaY - 0.95f));
+            if (!finalBossSpawned)
+            {
+                finalBossSpawned = true;
+                HumanoidMeleeEnemy boss = CreateEnemy(
+                    "Demon Knight Overlord",
+                    new Vector2(3.5f, arenaY - 0.95f),
+                    EnemyWeaponType.Shield,
+                    PlatformCount - 1,
+                    false,
+                    5);
+                InitializeEnemy(boss);
+            }
+
+            Feedback = "FINAL DUEL - DEMON KNIGHT OVERLORD";
+            feedbackUntil = Time.time + 2f;
+        }
+
+        public bool UnlockOrEquipSkill(TowerSkillId skill)
+        {
+            bool isActive = skill >= TowerSkillId.ResonanceSlash;
+            if (!unlockedSkills.Contains(skill))
+            {
+                if (SkillPoints <= 0)
+                {
+                    return false;
+                }
+
+                SkillPoints--;
+                unlockedSkills.Add(skill);
+            }
+
+            if (isActive)
+            {
+                equippedActiveSkill = skill;
+            }
+
+            return true;
+        }
+
+        public bool IsSkillUnlocked(TowerSkillId skill)
+        {
+            return unlockedSkills.Contains(skill);
         }
 
         private void CreateCombatGates()
@@ -605,7 +867,28 @@ namespace ReverseBell.Prototype
                     true);
                 ParentToFloorSection(platform, index);
 
-                if ((index + 1) % 5 == 0)
+                float side = index % 2 == 0 ? 1f : -1f;
+                GameObject upperStep = CreateBlock(
+                    "Tower Step " + (index + 1),
+                    new Vector2(
+                        Mathf.Clamp(x + (side * 4.2f), -6f, 6f),
+                        y + 1.45f),
+                    new Vector2(2.8f, 0.3f),
+                    Color.Lerp(PlatformColor, AccentColor, 0.18f),
+                    true);
+                ParentToFloorSection(upperStep, index);
+
+                if (index % 3 == 1)
+                {
+                    GameObject brazier = CreateVisualBlock(
+                        "Tower Brazier " + (index + 1),
+                        new Vector2(x - (side * 1.8f), y + 0.55f),
+                        new Vector2(0.35f, 0.7f),
+                        new Color(1f, 0.35f, 0.08f));
+                    ParentToFloorSection(brazier, index);
+                }
+
+                if ((index + 1) % 10 == 0)
                 {
                     GameObject banner = CreateVisualBlock(
                         "Checkpoint Banner " + (index + 1),
@@ -756,13 +1039,9 @@ namespace ReverseBell.Prototype
             return block;
         }
 
-        private void UpdateCheckpoint()
+        private void ActivateCheckpoint(int floorIndex)
         {
-            int reachedLevel = Mathf.Clamp(
-                Mathf.FloorToInt((player.transform.position.y - PlatformStartY) / PlatformSpacing),
-                0,
-                PlatformCount);
-            int reachedCheckpoint = reachedLevel / 5;
+            int reachedCheckpoint = (floorIndex + 1) / 10;
 
             if (reachedCheckpoint <= checkpointLevel)
             {
@@ -770,9 +1049,8 @@ namespace ReverseBell.Prototype
             }
 
             checkpointLevel = reachedCheckpoint;
-            int platformIndex = Mathf.Min((checkpointLevel * 5) - 1, PlatformCount - 1);
-            float checkpointX = platformXPattern[platformIndex % platformXPattern.Length];
-            float checkpointY = PlatformY(platformIndex) + 1.1f;
+            float checkpointX = platformXPattern[floorIndex % platformXPattern.Length];
+            float checkpointY = PlatformY(floorIndex) + 1.1f;
             player.SetCheckpoint(new Vector2(checkpointX, checkpointY));
             Feedback = "CHECKPOINT " + checkpointLevel;
             feedbackUntil = Time.time + 1.2f;
@@ -790,23 +1068,25 @@ namespace ReverseBell.Prototype
                 return;
             }
 
-            towerCleared = true;
-            Score += 5000;
-            Feedback = "TOWER ASCENT COMPLETE!";
-            feedbackUntil = float.PositiveInfinity;
-            towerBell.GetComponent<SpriteRenderer>().color = new Color(0.4f, 1f, 0.75f);
+            Feedback = "PRESS E TO ENTER THE FINAL BOSS ROOM";
+            feedbackUntil = Time.time + 0.2f;
         }
 
         private float GetFallLimit()
         {
             return checkpointLevel == 0
                 ? -7f
-                : (checkpointLevel * PlatformSpacing * 5f) - 8f;
+                : (checkpointLevel * PlatformSpacing * 10f) - 8f;
         }
 
         private void OnGUI()
         {
             InitializeGuiStyles();
+            if (skillMenuOpen)
+            {
+                DrawSkillMenu();
+                return;
+            }
 
             GUI.Label(
                 new Rect(24f, 18f, 600f, 40f),
@@ -814,7 +1094,7 @@ namespace ReverseBell.Prototype
                 titleStyle);
             GUI.Label(
                 new Rect(26f, 62f, 650f, 90f),
-                "MOVE  LEFT/RIGHT    JUMP  UP    ATTACK  Z    PARRY  X    SPECIAL  C\n" +
+                "MOVE  LEFT/RIGHT    JUMP  UP    ATTACK  Z    PARRY  X    SPECIAL  C    INTERACT  E\n" +
                 "CLIMB TO THE BELL AT THE TOP",
                 bodyStyle);
 
@@ -844,6 +1124,93 @@ namespace ReverseBell.Prototype
                 new Rect((Screen.width * 0.5f) - 250f, 24f, 500f, 60f),
                 Feedback,
                 centerStyle);
+        }
+
+        private void DrawSkillMenu()
+        {
+            GUI.Box(new Rect(0f, 0f, Screen.width, Screen.height), GUIContent.none);
+            GUI.Label(
+                new Rect((Screen.width * 0.5f) - 260f, 24f, 520f, 42f),
+                "BELL ALTAR - CHOOSE YOUR SKILLS",
+                centerStyle);
+            GUI.Label(
+                new Rect((Screen.width * 0.5f) - 260f, 65f, 520f, 32f),
+                "SKILL POINTS: " + SkillPoints + "    E / ESC: CLOSE",
+                centerStyle);
+
+            TowerSkillId[] passiveSkills =
+            {
+                TowerSkillId.SwordMastery,
+                TowerSkillId.IronWill,
+                TowerSkillId.ResonantGuard,
+                TowerSkillId.ArcaneEdge,
+                TowerSkillId.BloodOath
+            };
+            string[] passiveNames =
+            {
+                "Sword Mastery  (+2 sword damage)",
+                "Iron Will  (-1 damage taken)",
+                "Resonant Guard  (+1 parry resonance)",
+                "Arcane Edge  (+4 active damage)",
+                "Blood Oath  (heal 1 on kill)"
+            };
+
+            TowerSkillId[] activeSkills =
+            {
+                TowerSkillId.ResonanceSlash,
+                TowerSkillId.HealingBell,
+                TowerSkillId.DemonBreaker,
+                TowerSkillId.TimeAegis,
+                TowerSkillId.Execution
+            };
+            string[] activeNames =
+            {
+                "Resonance Slash  (area slash)",
+                "Healing Bell  (heal 5 HP)",
+                "Demon Breaker  (wide heavy strike)",
+                "Time Aegis  (3 sec invincibility)",
+                "Execution  (focused massive hit)"
+            };
+
+            DrawSkillColumn(
+                new Rect((Screen.width * 0.5f) - 470f, 110f, 440f, 390f),
+                "PASSIVE SKILLS",
+                passiveSkills,
+                passiveNames,
+                false);
+            DrawSkillColumn(
+                new Rect((Screen.width * 0.5f) + 30f, 110f, 440f, 390f),
+                "ACTIVE SKILLS - ONLY ONE EQUIPPED TO C",
+                activeSkills,
+                activeNames,
+                true);
+        }
+
+        private void DrawSkillColumn(
+            Rect area,
+            string heading,
+            TowerSkillId[] skills,
+            string[] names,
+            bool active)
+        {
+            GUI.Box(area, GUIContent.none);
+            GUI.Label(new Rect(area.x + 15f, area.y + 12f, area.width - 30f, 30f), heading, titleStyle);
+            for (int index = 0; index < skills.Length; index++)
+            {
+                TowerSkillId skill = skills[index];
+                bool unlocked = IsSkillUnlocked(skill);
+                bool equipped = active && equippedActiveSkill == skill;
+                string state = equipped ? " [EQUIPPED]" : unlocked ? " [UNLOCKED]" : " [1 POINT]";
+                Rect buttonRect = new Rect(
+                    area.x + 18f,
+                    area.y + 58f + (index * 58f),
+                    area.width - 36f,
+                    44f);
+                if (GUI.Button(buttonRect, names[index] + state))
+                {
+                    UnlockOrEquipSkill(skill);
+                }
+            }
         }
 
         private void InitializeGuiStyles()
@@ -879,18 +1246,21 @@ namespace ReverseBell.Prototype
                 string name,
                 Vector2 position,
                 EnemyWeaponType weaponType,
-                int floorIndex)
+                int floorIndex,
+                int bossTier)
             {
                 Name = name;
                 Position = position;
                 WeaponType = weaponType;
                 FloorIndex = floorIndex;
+                BossTier = bossTier;
             }
 
             public string Name { get; }
             public Vector2 Position { get; }
             public EnemyWeaponType WeaponType { get; }
             public int FloorIndex { get; }
+            public int BossTier { get; }
         }
     }
 }

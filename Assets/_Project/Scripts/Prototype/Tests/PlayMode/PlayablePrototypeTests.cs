@@ -273,6 +273,48 @@ namespace ReverseBell.Tests
         }
 
         [UnityTest]
+        public IEnumerator DemonBoss_GrantsSkillPointAndSkillCanBeUnlocked()
+        {
+            var root = new GameObject("Boss Skill Test Root");
+            var game = root.AddComponent<PrototypeGame>();
+            yield return null;
+
+            HumanoidMeleeEnemy[] allEnemies =
+                Resources.FindObjectsOfTypeAll<HumanoidMeleeEnemy>();
+            HumanoidMeleeEnemy boss = null;
+            foreach (HumanoidMeleeEnemy enemy in allEnemies)
+            {
+                if (enemy != null && enemy.FloorIndex == 9 && enemy.IsBoss)
+                {
+                    boss = enemy;
+                    break;
+                }
+            }
+
+            Assert.That(boss, Is.Not.Null);
+            boss.ReceivePlayerAttack(boss.MaxHealth);
+            Assert.That(game.SkillPoints, Is.EqualTo(1));
+            Assert.That(game.UnlockOrEquipSkill(TowerSkillId.SwordMastery), Is.True);
+            Assert.That(game.IsSkillUnlocked(TowerSkillId.SwordMastery), Is.True);
+            Assert.That(game.SkillPoints, Is.Zero);
+
+            Object.Destroy(root);
+        }
+
+        [UnityTest]
+        public IEnumerator ActiveSkills_OnlyKeepOneEquipped()
+        {
+            var root = new GameObject("Active Skill Test Root");
+            var game = root.AddComponent<PrototypeGame>();
+            yield return null;
+
+            Assert.That(game.EquippedActiveSkill, Is.EqualTo(TowerSkillId.ResonanceSlash));
+            Assert.That(game.IsSkillUnlocked(TowerSkillId.ResonanceSlash), Is.True);
+
+            Object.Destroy(root);
+        }
+
+        [UnityTest]
         public IEnumerator Special_HasFiveSecondCooldown()
         {
             var root = new GameObject("Special Cooldown Test Root");
