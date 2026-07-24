@@ -29,7 +29,10 @@ namespace ReverseBell.Tests
             Assert.That(Object.FindFirstObjectByType<HeroSwordsmanVisual>(), Is.Not.Null);
             Assert.That(Object.FindFirstObjectByType<HumanoidMeleeEnemy>(), Is.Not.Null);
             Assert.That(Object.FindFirstObjectByType<HumanoidEnemyVisual>(), Is.Not.Null);
-            Assert.That(Object.FindFirstObjectByType<VerticalCameraFollow>(), Is.Not.Null);
+            VerticalCameraFollow cameraFollow =
+                Object.FindFirstObjectByType<VerticalCameraFollow>();
+            Assert.That(cameraFollow, Is.Not.Null);
+            Assert.That(cameraFollow.MaximumY, Is.GreaterThan(100f));
             Assert.That(GameObject.Find("Rhythm Projectile"), Is.Null);
 
             HeroSwordsmanVisual hero = Object.FindFirstObjectByType<HeroSwordsmanVisual>();
