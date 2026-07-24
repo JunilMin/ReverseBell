@@ -30,22 +30,26 @@ namespace ReverseBell.Prototype
                 Resources.Load<Texture2D>("HeroSwordsman/Idle"),
                 1,
                 2,
-                2);
+                2,
+                52f);
             runFrames = CreateFrames(
                 Resources.Load<Texture2D>("HeroSwordsman/Run"),
                 3,
                 3,
-                8);
+                8,
+                52f);
             jumpFrames = CreateFrames(
                 Resources.Load<Texture2D>("HeroSwordsman/JumpAndFall"),
                 2,
                 2,
-                4);
+                4,
+                52f);
             attackFrames = CreateFrames(
                 Resources.Load<Texture2D>("HeroSwordsman/Attack"),
                 6,
                 1,
-                6);
+                6,
+                44f);
 
             characterRenderer.sprite = idleFrames[0];
         }
@@ -104,7 +108,8 @@ namespace ReverseBell.Prototype
             Texture2D texture,
             int columns,
             int rows,
-            int frameCount)
+            int frameCount,
+            float pixelsPerUnit)
         {
             if (texture == null)
             {
@@ -112,7 +117,6 @@ namespace ReverseBell.Prototype
             }
 
             const float frameSize = 64f;
-            const float pixelsPerUnit = 52f;
             var frames = new Sprite[frameCount];
 
             for (int index = 0; index < frameCount; index++)

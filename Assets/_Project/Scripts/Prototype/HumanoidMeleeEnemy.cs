@@ -16,8 +16,6 @@ namespace ReverseBell.Prototype
         private float attackRange;
         private float moveSpeed;
         private bool defeated;
-        private bool attackResetPending;
-        private float attackResetAt;
 
         public int Health { get; private set; }
 
@@ -73,14 +71,9 @@ namespace ReverseBell.Prototype
             float vertical = Mathf.Abs(player.transform.position.y - transform.position.y);
             visual.SetFacing(horizontal);
 
-            if (attackResetPending && Time.time >= attackResetAt)
-            {
-                attackResetPending = false;
-                visual.ResetAttack();
-            }
-
             if (vertical > 1.3f || Mathf.Abs(horizontal) > 5f)
             {
+                visual.SetMoving(false);
                 return;
             }
 
@@ -89,6 +82,11 @@ namespace ReverseBell.Prototype
                 float targetX = Mathf.Clamp(player.transform.position.x, leftBound, rightBound);
                 float newX = Mathf.MoveTowards(transform.position.x, targetX, moveSpeed * Time.deltaTime);
                 transform.position = new Vector3(newX, transform.position.y, 0f);
+                visual.SetMoving(true);
+            }
+            else
+            {
+                visual.SetMoving(false);
             }
         }
 
@@ -127,8 +125,6 @@ namespace ReverseBell.Prototype
         private void PerformAttack()
         {
             visual.PlayAttack();
-            attackResetPending = true;
-            attackResetAt = Time.time + 0.38f;
 
             if (Vector2.Distance(player.transform.position, transform.position) > attackRange)
             {
@@ -172,12 +168,15 @@ namespace ReverseBell.Prototype
 
             if (Health > 0)
             {
+                visual.PlayHit();
                 return;
             }
 
             defeated = true;
+            GetComponent<BoxCollider2D>().enabled = false;
             game.RegisterEnemyDefeat(this);
-            Destroy(gameObject);
+            visual.PlayDeath();
+            Destroy(gameObject, visual.DeathDuration);
         }
     }
 }

@@ -26,6 +26,12 @@ namespace ReverseBell.Prototype
         private float nextAttackAt;
         private float nextSpecialAt;
         private float facingDirection = 1f;
+        private float attackImpactAt;
+        private float specialImpactAt;
+        private float queuedAttackDirection;
+        private float queuedSpecialDirection;
+        private bool attackImpactQueued;
+        private bool specialImpactQueued;
 
         public bool IsParrying => Time.time <= parryUntil;
         public float FacingDirection => facingDirection;
@@ -66,6 +72,8 @@ namespace ReverseBell.Prototype
 
         private void Update()
         {
+            ResolveQueuedCombatImpacts();
+
             float movement = ReadMovement();
             if (Mathf.Abs(movement) > 0.05f)
             {
@@ -83,7 +91,9 @@ namespace ReverseBell.Prototype
             {
                 attackUntil = Time.time + AttackDuration;
                 nextAttackAt = Time.time + AttackCooldown;
-                AttackRequested?.Invoke(facingDirection);
+                attackImpactAt = Time.time + 0.12f;
+                queuedAttackDirection = facingDirection;
+                attackImpactQueued = true;
             }
 
             if (WasParryPressed())
@@ -96,11 +106,28 @@ namespace ReverseBell.Prototype
             {
                 specialUntil = Time.time + SpecialDuration;
                 nextSpecialAt = Time.time + SpecialCooldown;
-                SpecialRequested?.Invoke(facingDirection);
+                specialImpactAt = Time.time + 0.2f;
+                queuedSpecialDirection = facingDirection;
+                specialImpactQueued = true;
             }
 
             parryRenderer.enabled = IsParrying;
             characterVisual.SetPose(movement, body.linearVelocity.y, IsGrounded(), IsSwordAction);
+        }
+
+        private void ResolveQueuedCombatImpacts()
+        {
+            if (attackImpactQueued && Time.time >= attackImpactAt)
+            {
+                attackImpactQueued = false;
+                AttackRequested?.Invoke(queuedAttackDirection);
+            }
+
+            if (specialImpactQueued && Time.time >= specialImpactAt)
+            {
+                specialImpactQueued = false;
+                SpecialRequested?.Invoke(queuedSpecialDirection);
+            }
         }
 
         public void ResetPosition()

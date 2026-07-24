@@ -2,223 +2,272 @@ using UnityEngine;
 
 namespace ReverseBell.Prototype
 {
+    [RequireComponent(typeof(SpriteRenderer))]
     public sealed class HumanoidEnemyVisual : MonoBehaviour
     {
-        private static readonly Color BodyColor = new Color(0.72f, 0.18f, 0.2f);
-        private static readonly Color WarningColor = new Color(1f, 0.65f, 0.12f);
-        private static readonly Color SteelColor = new Color(0.78f, 0.84f, 0.9f);
-        private static readonly Color WoodColor = new Color(0.36f, 0.2f, 0.1f);
+        private const float FrameSize = 256f;
+        private const float PixelsPerUnit = 72f;
+        private const float IdleFramesPerSecond = 30f;
+        private const float RunFramesPerSecond = 34f;
+        private const float AttackFramesPerSecond = 48f;
+        private const float ReactionFramesPerSecond = 45f;
 
-        private Transform visualRoot;
-        private Transform weaponRoot;
-        private SpriteRenderer[] bodyRenderers;
-        private float facing = -1f;
+        private SpriteRenderer characterRenderer;
+        private Sprite[] idleLeft;
+        private Sprite[] idleRight;
+        private Sprite[] runLeft;
+        private Sprite[] runRight;
+        private Sprite[] attackLeft;
+        private Sprite[] attackRight;
+        private Sprite[] hitLeft;
+        private Sprite[] hitRight;
+        private Sprite[] deathLeft;
+        private Sprite[] deathRight;
+        private Sprite[] currentFrames;
         private EnemyWeaponType weaponType;
-        private float attackStartedAt;
+        private float animationStartedAt;
+        private float framesPerSecond;
+        private float attackFramesPerSecond;
+        private float facing = -1f;
+        private bool loopAnimation;
+        private bool telegraphing;
         private bool attacking;
+        private bool reacting;
+        private bool dying;
 
-        private const float VisualScale = 1.18f;
-        private const float AttackDuration = 0.36f;
+        public float DeathDuration =>
+            deathLeft == null ? 0f : deathLeft.Length / ReactionFramesPerSecond;
 
-        public void Build(EnemyWeaponType weaponType)
+        public void Build(EnemyWeaponType type)
         {
-            this.weaponType = weaponType;
-            visualRoot = new GameObject("Humanoid Visual").transform;
-            visualRoot.SetParent(transform, false);
+            weaponType = type;
+            characterRenderer = GetComponent<SpriteRenderer>();
+            characterRenderer.sortingOrder = 3;
+            characterRenderer.color = EnemyTint(type);
 
-            CreatePart("Head", new Vector2(0f, 0.48f), new Vector2(0.44f, 0.44f), PrototypeVisuals.CircleSprite, BodyColor, 3);
-            CreatePart("Torso", new Vector2(0f, 0.02f), new Vector2(0.3f, 0.68f), PrototypeVisuals.WhiteSprite, BodyColor, 2);
-            CreatePart("Rear Arm", new Vector2(-0.18f, 0.05f), new Vector2(0.17f, 0.58f), PrototypeVisuals.WhiteSprite, BodyColor, 1);
-            CreatePart("Front Arm", new Vector2(0.2f, 0.08f), new Vector2(0.17f, 0.58f), PrototypeVisuals.WhiteSprite, BodyColor, 4);
-            CreatePart("Left Leg", new Vector2(-0.13f, -0.5f), new Vector2(0.19f, 0.6f), PrototypeVisuals.WhiteSprite, BodyColor, 1);
-            CreatePart("Right Leg", new Vector2(0.13f, -0.5f), new Vector2(0.19f, 0.6f), PrototypeVisuals.WhiteSprite, BodyColor, 1);
+            idleLeft = LoadFrames("L_Idle");
+            idleRight = LoadFrames("R_Idle");
+            runLeft = LoadFrames("L_Run");
+            runRight = LoadFrames("R_Run");
+            hitLeft = LoadFrames("L_Impact_Body");
+            hitRight = LoadFrames("R_Impact_Body");
+            deathLeft = LoadFrames("L_Death_Forward");
+            deathRight = LoadFrames("R_Death_Forward");
 
-            weaponRoot = new GameObject(weaponType + " Weapon").transform;
-            weaponRoot.SetParent(visualRoot, false);
-            weaponRoot.localPosition = new Vector3(0.36f, 0.1f, 0f);
-
-            switch (weaponType)
+            string attackName = type switch
             {
-                case EnemyWeaponType.Spear:
-                    BuildSpear();
-                    break;
-                case EnemyWeaponType.Shield:
-                    BuildShield();
-                    break;
-                default:
-                    BuildSword();
-                    break;
-            }
+                EnemyWeaponType.Spear => "Slash3",
+                EnemyWeaponType.Shield => "Slash4",
+                _ => "Slash1"
+            };
+            attackLeft = LoadFrames("L_" + attackName);
+            attackRight = LoadFrames("R_" + attackName);
+            attackFramesPerSecond =
+                type == EnemyWeaponType.Shield ? 100f : AttackFramesPerSecond;
 
-            bodyRenderers = visualRoot.GetComponentsInChildren<SpriteRenderer>();
-            SetFacing(-1f);
-        }
-
-        public void SetFacing(float direction)
-        {
-            if (Mathf.Abs(direction) > 0.01f)
-            {
-                facing = Mathf.Sign(direction);
-            }
-
-            visualRoot.localScale = new Vector3(facing * VisualScale, VisualScale, 1f);
-        }
-
-        public void SetTelegraph(bool active)
-        {
-            if (!active)
-            {
-                attacking = false;
-                visualRoot.localPosition = Vector3.zero;
-                visualRoot.localRotation = Quaternion.identity;
-                weaponRoot.localPosition = new Vector3(0.36f, 0.1f, 0f);
-            }
-
-            foreach (SpriteRenderer renderer in bodyRenderers)
-            {
-                if (renderer.transform.IsChildOf(weaponRoot))
-                {
-                    continue;
-                }
-
-                renderer.color = active ? WarningColor : BodyColor;
-            }
-
-            float telegraphAngle = weaponType == EnemyWeaponType.Spear ? 72f : 95f;
-            weaponRoot.localRotation =
-                Quaternion.Euler(0f, 0f, active ? telegraphAngle : 12f);
-        }
-
-        public void PlayAttack()
-        {
-            attacking = true;
-            attackStartedAt = Time.time;
-        }
-
-        public void ResetAttack()
-        {
-            SetTelegraph(false);
+            PlayLoop(idleLeft, IdleFramesPerSecond);
         }
 
         private void Update()
         {
-            if (!attacking)
+            if (currentFrames == null || currentFrames.Length == 0)
             {
                 return;
             }
 
-            float progress = Mathf.Clamp01((Time.time - attackStartedAt) / AttackDuration);
-            float strike = Mathf.SmoothStep(0f, 1f, Mathf.Min(progress * 2.4f, 1f));
-            float recovery = progress < 0.58f
-                ? 1f
-                : 1f - Mathf.SmoothStep(0f, 1f, (progress - 0.58f) / 0.42f);
-            float force = strike * recovery;
+            float elapsed = Time.time - animationStartedAt;
+            int rawIndex = Mathf.FloorToInt(elapsed * framesPerSecond);
 
-            visualRoot.localPosition = new Vector3(0.42f * force, 0f, 0f);
-            visualRoot.localRotation = Quaternion.Euler(0f, 0f, -8f * force);
+            if (!loopAnimation && rawIndex >= currentFrames.Length)
+            {
+                if (dying)
+                {
+                    characterRenderer.sprite = currentFrames[^1];
+                    return;
+                }
 
-            if (weaponType == EnemyWeaponType.Spear)
-            {
-                weaponRoot.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(72f, -78f, strike));
-                weaponRoot.localPosition = new Vector3(
-                    0.36f + (0.72f * force),
-                    0.1f - (0.12f * force),
-                    0f);
-            }
-            else
-            {
-                float endAngle = weaponType == EnemyWeaponType.Shield ? -100f : -135f;
-                weaponRoot.localRotation =
-                    Quaternion.Euler(0f, 0f, Mathf.Lerp(95f, endAngle, strike));
+                telegraphing = false;
+                attacking = false;
+                reacting = false;
+                characterRenderer.color = EnemyTint(weaponType);
+                PlayLoop(FacingFrames(idleLeft, idleRight), IdleFramesPerSecond);
+                return;
             }
 
-            if (progress >= 1f)
+            int index = loopAnimation
+                ? rawIndex % currentFrames.Length
+                : Mathf.Min(rawIndex, currentFrames.Length - 1);
+            characterRenderer.sprite = currentFrames[index];
+        }
+
+        public void SetFacing(float direction)
+        {
+            if (dying || Mathf.Abs(direction) <= 0.01f)
             {
-                ResetAttack();
+                return;
+            }
+
+            float newFacing = Mathf.Sign(direction);
+            if (Mathf.Approximately(newFacing, facing))
+            {
+                return;
+            }
+
+            facing = newFacing;
+            if (!telegraphing && !attacking && !reacting)
+            {
+                PlayLoop(FacingFrames(idleLeft, idleRight), IdleFramesPerSecond);
             }
         }
 
-        private void BuildSword()
+        public void SetMoving(bool moving)
         {
-            CreateWeaponPart("Sword Blade", new Vector2(0.38f, 0.22f), new Vector2(0.12f, 1.05f), SteelColor, 5);
-            CreateWeaponPart("Sword Hilt", new Vector2(0.18f, -0.18f), new Vector2(0.42f, 0.12f), WoodColor, 6);
+            if (dying || telegraphing || attacking || reacting)
+            {
+                return;
+            }
+
+            Sprite[] desired = moving
+                ? FacingFrames(runLeft, runRight)
+                : FacingFrames(idleLeft, idleRight);
+            float speed = moving ? RunFramesPerSecond : IdleFramesPerSecond;
+            if (currentFrames != desired)
+            {
+                PlayLoop(desired, speed);
+            }
         }
 
-        private void BuildSpear()
+        public void SetTelegraph(bool active)
         {
-            CreateWeaponPart("Spear Shaft", new Vector2(0.45f, 0.05f), new Vector2(0.1f, 1.7f), WoodColor, 5);
-            GameObject tip = CreateWeaponPart("Spear Tip", new Vector2(0.86f, 0.72f), new Vector2(0.2f, 0.38f), SteelColor, 6);
-            tip.transform.localRotation = Quaternion.Euler(0f, 0f, -35f);
+            if (dying || !active)
+            {
+                return;
+            }
+
+            telegraphing = true;
+            attacking = false;
+            reacting = false;
+            characterRenderer.color = Color.Lerp(EnemyTint(weaponType), Color.white, 0.45f);
+            PlayOnce(FacingFrames(attackLeft, attackRight), attackFramesPerSecond);
         }
 
-        private void BuildShield()
+        public void PlayAttack()
         {
-            CreateWeaponPart("Short Sword", new Vector2(0.36f, 0.2f), new Vector2(0.11f, 0.8f), SteelColor, 4);
-            GameObject shield = CreateWeaponPart(
-                "Round Shield",
-                new Vector2(-0.2f, 0.02f),
-                new Vector2(0.7f, 0.82f),
-                new Color(0.35f, 0.42f, 0.52f),
-                7,
-                PrototypeVisuals.CircleSprite);
-            CreatePartOn(
-                shield.transform,
-                "Shield Boss",
-                Vector2.zero,
-                new Vector2(0.22f, 0.22f),
-                PrototypeVisuals.CircleSprite,
-                SteelColor,
-                8);
+            if (dying)
+            {
+                return;
+            }
+
+            attacking = true;
+            telegraphing = false;
+            characterRenderer.color = EnemyTint(weaponType);
+            if (currentFrames != FacingFrames(attackLeft, attackRight))
+            {
+                PlayOnce(FacingFrames(attackLeft, attackRight), attackFramesPerSecond);
+            }
         }
 
-        private GameObject CreateWeaponPart(
-            string partName,
-            Vector2 localPosition,
-            Vector2 localScale,
-            Color color,
-            int sortingOrder,
-            Sprite sprite = null)
+        public void ResetAttack()
         {
-            return CreatePartOn(
-                weaponRoot,
-                partName,
-                localPosition,
-                localScale,
-                sprite ?? PrototypeVisuals.WhiteSprite,
-                color,
-                sortingOrder);
+            if (dying)
+            {
+                return;
+            }
+
+            attacking = false;
+            telegraphing = false;
+            characterRenderer.color = EnemyTint(weaponType);
         }
 
-        private GameObject CreatePart(
-            string partName,
-            Vector2 localPosition,
-            Vector2 localScale,
-            Sprite sprite,
-            Color color,
-            int sortingOrder)
+        public void PlayHit()
         {
-            return CreatePartOn(visualRoot, partName, localPosition, localScale, sprite, color, sortingOrder);
+            if (dying)
+            {
+                return;
+            }
+
+            reacting = true;
+            attacking = false;
+            telegraphing = false;
+            characterRenderer.color = Color.white;
+            PlayOnce(FacingFrames(hitLeft, hitRight), ReactionFramesPerSecond);
         }
 
-        private static GameObject CreatePartOn(
-            Transform parent,
-            string partName,
-            Vector2 localPosition,
-            Vector2 localScale,
-            Sprite sprite,
-            Color color,
-            int sortingOrder)
+        public void PlayDeath()
         {
-            var part = new GameObject(partName);
-            part.transform.SetParent(parent, false);
-            part.transform.localPosition = localPosition;
-            part.transform.localScale = localScale;
+            dying = true;
+            reacting = false;
+            attacking = false;
+            telegraphing = false;
+            characterRenderer.color = EnemyTint(weaponType);
+            PlayOnce(FacingFrames(deathLeft, deathRight), ReactionFramesPerSecond);
+        }
 
-            var renderer = part.AddComponent<SpriteRenderer>();
-            renderer.sprite = sprite;
-            renderer.color = color;
-            renderer.sortingOrder = sortingOrder;
-            return part;
+        private void PlayLoop(Sprite[] frames, float speed)
+        {
+            currentFrames = frames;
+            framesPerSecond = speed;
+            animationStartedAt = Time.time;
+            loopAnimation = true;
+        }
+
+        private void PlayOnce(Sprite[] frames, float speed)
+        {
+            currentFrames = frames;
+            framesPerSecond = speed;
+            animationStartedAt = Time.time;
+            loopAnimation = false;
+        }
+
+        private Sprite[] FacingFrames(Sprite[] left, Sprite[] right)
+        {
+            return facing < 0f ? left : right;
+        }
+
+        private static Sprite[] LoadFrames(string textureName)
+        {
+            Texture2D texture = Resources.Load<Texture2D>("AnimatedKnight/" + textureName);
+            if (texture == null)
+            {
+                throw new MissingReferenceException(
+                    "Animated Knight texture was not found: " + textureName);
+            }
+
+            int columns = Mathf.RoundToInt(texture.width / FrameSize);
+            int rows = Mathf.RoundToInt(texture.height / FrameSize);
+            var frames = new Sprite[columns * rows];
+            int index = 0;
+
+            for (int topRow = 0; topRow < rows; topRow++)
+            {
+                int rowFromBottom = rows - 1 - topRow;
+                for (int column = 0; column < columns; column++)
+                {
+                    frames[index] = Sprite.Create(
+                        texture,
+                        new Rect(
+                            column * FrameSize,
+                            rowFromBottom * FrameSize,
+                            FrameSize,
+                            FrameSize),
+                        new Vector2(0.5f, 0.13f),
+                        PixelsPerUnit);
+                    frames[index].name = textureName + " Frame " + index;
+                    index++;
+                }
+            }
+
+            return frames;
+        }
+
+        private static Color EnemyTint(EnemyWeaponType type)
+        {
+            return type switch
+            {
+                EnemyWeaponType.Spear => new Color(0.78f, 0.9f, 1f),
+                EnemyWeaponType.Shield => new Color(1f, 0.78f, 0.58f),
+                _ => Color.white
+            };
         }
     }
 }
