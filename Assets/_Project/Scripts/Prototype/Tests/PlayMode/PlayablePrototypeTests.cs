@@ -49,7 +49,9 @@ namespace ReverseBell.Tests
             Assert.That(
                 secondWalkway.transform.position.y - firstWalkway.transform.position.y,
                 Is.EqualTo(4.6f).Within(0.01f));
-            Assert.That(firstRamp.GetComponent<PolygonCollider2D>(), Is.Not.Null);
+            PolygonCollider2D stairRamp = firstRamp.GetComponent<PolygonCollider2D>();
+            Assert.That(stairRamp, Is.Not.Null);
+            Assert.That(stairRamp.isTrigger, Is.True);
             Assert.That(Object.FindFirstObjectByType<StairClimbZone>(), Is.Not.Null);
             Assert.That(GameObject.Find("Floor 1 Stone Chamber"), Is.Not.Null);
             Assert.That(GameObject.Find("Floor 1 Stairwell Pillar"), Is.Not.Null);
