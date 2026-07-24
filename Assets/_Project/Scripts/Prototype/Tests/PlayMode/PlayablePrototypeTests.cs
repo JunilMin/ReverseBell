@@ -12,23 +12,24 @@ namespace ReverseBell.Tests
         public IEnumerator PrototypeGame_CreatesPlayableStage()
         {
             var root = new GameObject("Prototype Test Root");
-            root.AddComponent<PrototypeGame>();
+            PrototypeGame game = root.AddComponent<PrototypeGame>();
 
             yield return null;
 
             Assert.That(GameObject.Find("Player"), Is.Not.Null);
             Assert.That(GameObject.Find("Sword Guard"), Is.Not.Null);
             Assert.That(GameObject.Find("Spear Guard"), Is.Not.Null);
-            Assert.That(GameObject.Find("Shield Guard"), Is.Not.Null);
+            Assert.That(game.GetEnemy(EnemyWeaponType.Shield), Is.Not.Null);
             Assert.That(GameObject.Find("Ground"), Is.Not.Null);
-            Assert.That(GameObject.Find("Tower Platform 16"), Is.Not.Null);
-            Assert.That(GameObject.Find("Tower Platform 50"), Is.Not.Null);
-            Assert.That(GameObject.Find("Bell Chamber Floor"), Is.Not.Null);
+            Assert.That(game.FloorSectionCount, Is.EqualTo(50));
+            Assert.That(game.ActiveFloorSectionCount, Is.EqualTo(8));
             Assert.That(GameObject.Find("Tower Bell"), Is.Not.Null);
             Assert.That(Object.FindFirstObjectByType<PlayerAvatar>(), Is.Not.Null);
             Assert.That(Object.FindFirstObjectByType<HeroSwordsmanVisual>(), Is.Not.Null);
             Assert.That(Object.FindFirstObjectByType<HumanoidMeleeEnemy>(), Is.Not.Null);
             Assert.That(Object.FindFirstObjectByType<HumanoidEnemyVisual>(), Is.Not.Null);
+            Assert.That(HumanoidEnemyVisual.CachedAnimationCount, Is.EqualTo(14));
+            Assert.That(HumanoidEnemyVisual.CachedSpriteCount, Is.LessThan(1000));
             VerticalCameraFollow cameraFollow =
                 Object.FindFirstObjectByType<VerticalCameraFollow>();
             Assert.That(cameraFollow, Is.Not.Null);

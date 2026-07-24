@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ReverseBell.Prototype
@@ -5,6 +6,9 @@ namespace ReverseBell.Prototype
     [RequireComponent(typeof(SpriteRenderer))]
     public sealed class HumanoidEnemyVisual : MonoBehaviour
     {
+        private static readonly Dictionary<string, Sprite[]> FrameCache =
+            new Dictionary<string, Sprite[]>();
+
         private const float FrameSize = 256f;
         private const float PixelsPerUnit = 72f;
         private const float IdleFramesPerSecond = 30f;
@@ -39,6 +43,22 @@ namespace ReverseBell.Prototype
 
         public float DeathDuration =>
             deathLeft == null ? 0f : deathLeft.Length / ReactionFramesPerSecond;
+
+        public static int CachedAnimationCount => FrameCache.Count;
+
+        public static int CachedSpriteCount
+        {
+            get
+            {
+                int count = 0;
+                foreach (Sprite[] frames in FrameCache.Values)
+                {
+                    count += frames.Length;
+                }
+
+                return count;
+            }
+        }
 
         public void Build(EnemyWeaponType type)
         {
@@ -247,6 +267,11 @@ namespace ReverseBell.Prototype
 
         private static Sprite[] LoadFrames(string textureName)
         {
+            if (FrameCache.TryGetValue(textureName, out Sprite[] cachedFrames))
+            {
+                return cachedFrames;
+            }
+
             Texture2D texture = Resources.Load<Texture2D>("AnimatedKnight/" + textureName);
             if (texture == null)
             {
@@ -281,6 +306,7 @@ namespace ReverseBell.Prototype
                 }
             }
 
+            FrameCache.Add(textureName, frames);
             return frames;
         }
 

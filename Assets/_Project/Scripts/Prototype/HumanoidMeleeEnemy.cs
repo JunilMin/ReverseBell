@@ -125,7 +125,11 @@ namespace ReverseBell.Prototype
 
         private void OnBeat(long beat)
         {
-            if (defeated || IsStunned || !PlayerIsInCombatLane())
+            if (!isActiveAndEnabled ||
+                !gameObject.activeInHierarchy ||
+                defeated ||
+                IsStunned ||
+                !PlayerIsInCombatLane())
             {
                 return;
             }
