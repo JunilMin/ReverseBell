@@ -62,6 +62,10 @@ namespace ReverseBell.Tests
             Assert.That(firstStair.CanBeginTraversal(new Vector2(6.65f, 3.96f), -1f), Is.True);
             Assert.That(GameObject.Find("Floor 1 Stone Chamber"), Is.Not.Null);
             Assert.That(GameObject.Find("Floor 1 Stairwell Pillar"), Is.Not.Null);
+            Assert.That(DungeonCastleVisuals.IsAvailable, Is.True);
+            Assert.That(
+                firstWalkway.GetComponent<SpriteRenderer>().drawMode,
+                Is.EqualTo(SpriteDrawMode.Tiled));
 
             HeroSwordsmanVisual hero = Object.FindFirstObjectByType<HeroSwordsmanVisual>();
             hero.SetPose(1f, 0f, true, HeroActionState.None);

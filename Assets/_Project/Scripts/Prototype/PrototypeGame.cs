@@ -892,6 +892,7 @@ namespace ReverseBell.Prototype
                     new Vector2(9f, 0.48f),
                     PlatformColor,
                     true);
+                DungeonCastleVisuals.StyleFloor(platform);
                 ParentToFloorSection(platform, index);
 
                 GameObject stairLanding = CreateOneWayLanding(
@@ -899,6 +900,7 @@ namespace ReverseBell.Prototype
                     new Vector2(4.55f, y),
                     new Vector2(5.1f, 0.38f),
                     Color.Lerp(PlatformColor, AccentColor, 0.18f));
+                DungeonCastleVisuals.StyleFloor(stairLanding);
                 ParentToFloorSection(stairLanding, index);
 
                 if (index < PlatformCount - 1)
@@ -953,6 +955,7 @@ namespace ReverseBell.Prototype
                 new Vector2(13.6f, PlatformSpacing - 0.12f),
                 wallColor);
             backdrop.GetComponent<SpriteRenderer>().sortingOrder = -8;
+            DungeonCastleVisuals.StyleWall(backdrop, -8);
             ParentToFloorSection(backdrop, floorIndex);
 
             GameObject leftPillar = CreateVisualBlock(
@@ -973,6 +976,9 @@ namespace ReverseBell.Prototype
             leftPillar.GetComponent<SpriteRenderer>().sortingOrder = -2;
             stairPillar.GetComponent<SpriteRenderer>().sortingOrder = -2;
             ceilingBeam.GetComponent<SpriteRenderer>().sortingOrder = -2;
+            DungeonCastleVisuals.StyleTrim(leftPillar, -2);
+            DungeonCastleVisuals.StyleTrim(stairPillar, -2);
+            DungeonCastleVisuals.StyleTrim(ceilingBeam, -2);
             ParentToFloorSection(leftPillar, floorIndex);
             ParentToFloorSection(stairPillar, floorIndex);
             ParentToFloorSection(ceilingBeam, floorIndex);
@@ -986,6 +992,7 @@ namespace ReverseBell.Prototype
                     new Vector2(1.18f, 0.18f),
                     new Color(0.22f, 0.23f, 0.29f));
                 stone.GetComponent<SpriteRenderer>().sortingOrder = -3;
+                DungeonCastleVisuals.StyleWall(stone, -3);
                 ParentToFloorSection(stone, floorIndex);
             }
         }
@@ -1052,7 +1059,7 @@ namespace ReverseBell.Prototype
                     new Vector2(x, y),
                     new Vector2(1.35f, 0.22f),
                     stairColor);
-                step.GetComponent<SpriteRenderer>().sortingOrder = 0;
+                DungeonCastleVisuals.StyleFloor(step, 2);
                 ParentToFloorSection(step, floorIndex);
             }
 
@@ -1066,6 +1073,8 @@ namespace ReverseBell.Prototype
                 new Vector2(EndX, endY + 0.48f),
                 new Vector2(0.16f, 0.95f),
                 AccentColor);
+            DungeonCastleVisuals.StyleTrim(lowerPost, 1);
+            DungeonCastleVisuals.StyleTrim(upperPost, 1);
             ParentToFloorSection(lowerPost, floorIndex);
             ParentToFloorSection(upperPost, floorIndex);
         }
@@ -1462,6 +1471,99 @@ namespace ReverseBell.Prototype
             public EnemyWeaponType WeaponType { get; }
             public int FloorIndex { get; }
             public int BossTier { get; }
+        }
+    }
+
+    public static class DungeonCastleVisuals
+    {
+        private const float PixelsPerUnit = 24f;
+
+        private static Sprite stoneFloor;
+        private static Sprite stoneWall;
+        private static Sprite stoneTrim;
+
+        public static bool IsAvailable =>
+            Resources.Load<Texture2D>("DungeonCastle/DungeonTileset") != null;
+
+        public static void StyleFloor(GameObject target, int sortingOrder = 1)
+        {
+            ApplyTiledSprite(target, GetStoneFloor(), sortingOrder);
+        }
+
+        public static void StyleWall(GameObject target, int sortingOrder = -4)
+        {
+            ApplyTiledSprite(target, GetStoneWall(), sortingOrder);
+        }
+
+        public static void StyleTrim(GameObject target, int sortingOrder = 0)
+        {
+            ApplyTiledSprite(target, GetStoneTrim(), sortingOrder);
+        }
+
+        private static Sprite GetStoneFloor()
+        {
+            return stoneFloor ??= CreateTile("Dungeon Stone Floor", 0, 0);
+        }
+
+        private static Sprite GetStoneWall()
+        {
+            return stoneWall ??= CreateTile("Dungeon Stone Wall", 24, 0);
+        }
+
+        private static Sprite GetStoneTrim()
+        {
+            return stoneTrim ??= CreateTile("Dungeon Stone Trim", 48, 0);
+        }
+
+        private static Sprite CreateTile(string spriteName, int x, int y)
+        {
+            Texture2D texture = Resources.Load<Texture2D>("DungeonCastle/DungeonTileset");
+            if (texture == null || texture.width < x + 24 || texture.height < y + 24)
+            {
+                return null;
+            }
+
+            Sprite sprite = Sprite.Create(
+                texture,
+                new Rect(x, y, 24, 24),
+                new Vector2(0.5f, 0.5f),
+                PixelsPerUnit,
+                0,
+                SpriteMeshType.FullRect);
+            sprite.name = spriteName;
+            return sprite;
+        }
+
+        private static void ApplyTiledSprite(
+            GameObject target,
+            Sprite sprite,
+            int sortingOrder)
+        {
+            if (target == null || sprite == null)
+            {
+                return;
+            }
+
+            Vector2 worldSize = target.transform.localScale;
+            target.transform.localScale = Vector3.one;
+
+            SpriteRenderer renderer = target.GetComponent<SpriteRenderer>();
+            if (renderer == null)
+            {
+                renderer = target.AddComponent<SpriteRenderer>();
+            }
+
+            renderer.sprite = sprite;
+            renderer.color = Color.white;
+            renderer.drawMode = SpriteDrawMode.Tiled;
+            renderer.size = worldSize;
+            renderer.sortingOrder = sortingOrder;
+
+            BoxCollider2D collider = target.GetComponent<BoxCollider2D>();
+            if (collider != null)
+            {
+                collider.size = worldSize;
+            }
         }
     }
 }
