@@ -52,7 +52,14 @@ namespace ReverseBell.Tests
             PolygonCollider2D stairRamp = firstRamp.GetComponent<PolygonCollider2D>();
             Assert.That(stairRamp, Is.Not.Null);
             Assert.That(stairRamp.isTrigger, Is.True);
-            Assert.That(Object.FindFirstObjectByType<StairClimbZone>(), Is.Not.Null);
+            StairClimbZone firstStair = GameObject
+                .Find("Stairs 1 to 2 Climb Zone")
+                .GetComponent<StairClimbZone>();
+            Assert.That(firstStair, Is.Not.Null);
+            Assert.That(firstStair.CanBeginTraversal(new Vector2(2.15f, -0.64f), 1f), Is.True);
+            Assert.That(firstStair.CanBeginTraversal(new Vector2(2.15f, -0.64f), -1f), Is.False);
+            Assert.That(firstStair.CanBeginTraversal(new Vector2(4.4f, 1.65f), 1f), Is.False);
+            Assert.That(firstStair.CanBeginTraversal(new Vector2(6.65f, 3.96f), -1f), Is.True);
             Assert.That(GameObject.Find("Floor 1 Stone Chamber"), Is.Not.Null);
             Assert.That(GameObject.Find("Floor 1 Stairwell Pillar"), Is.Not.Null);
 
