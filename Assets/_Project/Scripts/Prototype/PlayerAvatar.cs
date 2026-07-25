@@ -43,6 +43,8 @@ namespace ReverseBell.Prototype
         private StairClimbZone ignoredStair;
         private bool stairTraversalActive;
         private float stairTraversalVelocity;
+        private float stairJumpOffset;
+        private float stairJumpVelocity;
 
         public bool IsParrying => Time.time <= parryUntil;
         public float FacingDirection => facingDirection;
@@ -131,15 +133,26 @@ namespace ReverseBell.Prototype
             }
 
             bool jumpPressed = WasJumpPressed();
-            bool jumpedFromStair = jumpPressed && stair != null;
-            if (jumpedFromStair)
+            bool dropThroughStair = WasStairDropPressed() && stair != null;
+            if (dropThroughStair)
             {
                 stairTraversalActive = false;
                 activeStair = null;
                 ignoredStair = stair;
                 stair = null;
                 stairTraversalVelocity = 0f;
+                stairJumpOffset = 0f;
+                stairJumpVelocity = 0f;
                 body.bodyType = RigidbodyType2D.Dynamic;
+                body.position += Vector2.down * 0.35f;
+                body.linearVelocity = new Vector2(body.linearVelocity.x, -2.5f);
+                jumpPressed = false;
+            }
+            else if (jumpPressed && stair != null)
+            {
+                stairTraversalActive = true;
+                activeStair = stair;
+                stairJumpVelocity = JumpSpeed;
             }
 
             if (Mathf.Abs(movement) > 0.05f)
@@ -159,28 +172,45 @@ namespace ReverseBell.Prototype
                     stairTraversalVelocity,
                     targetStairVelocity,
                     18f * Time.deltaTime);
+                Vector2 stairBasePosition = stair.GetStandingPosition(body.position);
+                bool completed = false;
                 if (Mathf.Abs(stairTraversalVelocity) > 0.02f)
                 {
-                    body.position = stair.MoveAlong(
+                    stairBasePosition = stair.MoveAlong(
                         body.position,
                         stairTraversalVelocity,
                         Mathf.Abs(stairTraversalVelocity) * Time.deltaTime,
-                        out bool completed);
-                    if (completed)
+                        out completed);
+                }
+
+                if (stairJumpOffset > 0f || stairJumpVelocity > 0f)
+                {
+                    stairJumpVelocity -= 29.43f * Time.deltaTime;
+                    stairJumpOffset += stairJumpVelocity * Time.deltaTime;
+                    if (stairJumpOffset <= 0f && stairJumpVelocity < 0f)
                     {
-                        bool ascended =
-                            Mathf.Sign(stairTraversalVelocity) == stair.RiseDirection;
-                        stairTraversalActive = false;
-                        activeStair = null;
-                        ignoredStair = stair;
-                        body.bodyType = RigidbodyType2D.Dynamic;
-                        body.linearVelocity = new Vector2(
-                            ascended
-                                ? 0f
-                                : Mathf.Sign(stairTraversalVelocity) * MoveSpeed * 0.55f,
-                            0f);
-                        stairTraversalVelocity = 0f;
+                        stairJumpOffset = 0f;
+                        stairJumpVelocity = 0f;
                     }
+                }
+
+                body.position = stairBasePosition + (Vector2.up * stairJumpOffset);
+                if (completed)
+                {
+                    bool ascended =
+                        Mathf.Sign(stairTraversalVelocity) == stair.RiseDirection;
+                    stairTraversalActive = false;
+                    activeStair = null;
+                    ignoredStair = stair;
+                    body.bodyType = RigidbodyType2D.Dynamic;
+                    body.linearVelocity = new Vector2(
+                        ascended
+                            ? 0f
+                            : Mathf.Sign(stairTraversalVelocity) * MoveSpeed * 0.55f,
+                        Mathf.Max(0f, stairJumpVelocity));
+                    stairTraversalVelocity = 0f;
+                    stairJumpOffset = 0f;
+                    stairJumpVelocity = 0f;
                 }
             }
             else
@@ -189,6 +219,8 @@ namespace ReverseBell.Prototype
                     stairTraversalVelocity,
                     0f,
                     24f * Time.deltaTime);
+                stairJumpOffset = 0f;
+                stairJumpVelocity = 0f;
                 if (body.bodyType != RigidbodyType2D.Dynamic)
                 {
                     body.bodyType = RigidbodyType2D.Dynamic;
@@ -197,7 +229,7 @@ namespace ReverseBell.Prototype
                 body.linearVelocity = new Vector2(movement * MoveSpeed, body.linearVelocity.y);
             }
 
-            if (jumpPressed && (jumpedFromStair || IsGrounded()))
+            if (jumpPressed && stair == null && IsGrounded())
             {
                 body.linearVelocity = new Vector2(body.linearVelocity.x, JumpSpeed);
             }
@@ -251,6 +283,8 @@ namespace ReverseBell.Prototype
         {
             stairTraversalActive = false;
             stairTraversalVelocity = 0f;
+            stairJumpOffset = 0f;
+            stairJumpVelocity = 0f;
             activeStair = null;
             ignoredStair = null;
             body.bodyType = RigidbodyType2D.Dynamic;
@@ -390,6 +424,12 @@ namespace ReverseBell.Prototype
                 Keyboard.current.upArrowKey.wasPressedThisFrame;
         }
 
+        private static bool WasStairDropPressed()
+        {
+            return Keyboard.current != null &&
+                Keyboard.current.downArrowKey.wasPressedThisFrame;
+        }
+
         private static bool WasAttackPressed()
         {
             return Keyboard.current != null &&
@@ -511,6 +551,14 @@ namespace ReverseBell.Prototype
                 Mathf.Abs(playerPosition.y - upperStandingY) <= EntryVerticalTolerance;
 
             return enteringFromLowerFloor || enteringFromUpperFloor;
+        }
+
+        public Vector2 GetStandingPosition(Vector2 playerPosition)
+        {
+            float t = Mathf.InverseLerp(start.x, end.x, playerPosition.x);
+            return new Vector2(
+                Mathf.Clamp(playerPosition.x, Mathf.Min(start.x, end.x), Mathf.Max(start.x, end.x)),
+                Mathf.Lerp(start.y, end.y, t) + 0.72f);
         }
 
         public Vector2 MoveAlong(
