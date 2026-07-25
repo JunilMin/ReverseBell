@@ -125,7 +125,7 @@ namespace ReverseBell.Prototype
                     : StairClimbZone.FindAt(body.position);
             if (stair != null &&
                 !stairTraversalActive &&
-                !stair.TryGetStandingY(body.position, out _))
+                !stair.CanBeginTraversal(body.position, movement))
             {
                 stair = null;
             }
@@ -168,12 +168,16 @@ namespace ReverseBell.Prototype
                         out bool completed);
                     if (completed)
                     {
+                        bool ascended =
+                            Mathf.Sign(stairTraversalVelocity) == stair.RiseDirection;
                         stairTraversalActive = false;
                         activeStair = null;
                         ignoredStair = stair;
                         body.bodyType = RigidbodyType2D.Dynamic;
                         body.linearVelocity = new Vector2(
-                            Mathf.Sign(stairTraversalVelocity) * MoveSpeed * 0.7f,
+                            ascended
+                                ? 0f
+                                : Mathf.Sign(stairTraversalVelocity) * MoveSpeed * 0.55f,
                             0f);
                         stairTraversalVelocity = 0f;
                     }
@@ -485,6 +489,30 @@ namespace ReverseBell.Prototype
                 Mathf.Abs(playerPosition.y - standingY) <= 1.15f;
         }
 
+        public bool CanBeginTraversal(Vector2 playerPosition, float movement)
+        {
+            if (Mathf.Abs(movement) <= 0.05f)
+            {
+                return false;
+            }
+
+            const float EntryHorizontalTolerance = 0.72f;
+            const float EntryVerticalTolerance = 0.5f;
+            float direction = Mathf.Sign(movement);
+            float lowerStandingY = start.y + 0.72f;
+            float upperStandingY = end.y + 0.72f;
+            bool enteringFromLowerFloor =
+                direction == RiseDirection &&
+                Mathf.Abs(playerPosition.x - start.x) <= EntryHorizontalTolerance &&
+                Mathf.Abs(playerPosition.y - lowerStandingY) <= EntryVerticalTolerance;
+            bool enteringFromUpperFloor =
+                direction == -RiseDirection &&
+                Mathf.Abs(playerPosition.x - end.x) <= EntryHorizontalTolerance &&
+                Mathf.Abs(playerPosition.y - upperStandingY) <= EntryVerticalTolerance;
+
+            return enteringFromLowerFloor || enteringFromUpperFloor;
+        }
+
         public Vector2 MoveAlong(
             Vector2 playerPosition,
             float horizontalDirection,
@@ -499,13 +527,13 @@ namespace ReverseBell.Prototype
             if (direction > 0f && nextX >= upperX)
             {
                 completed = true;
-                return new Vector2(upperX, end.y + 0.78f);
+                return new Vector2(upperX, end.y + 0.72f);
             }
 
             if (direction < 0f && nextX <= lowerX)
             {
                 completed = true;
-                return new Vector2(lowerX, start.y + 0.78f);
+                return new Vector2(lowerX, start.y + 0.72f);
             }
 
             completed = false;

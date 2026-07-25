@@ -905,8 +905,8 @@ namespace ReverseBell.Prototype
                 {
                     CreateStairFlight(
                         index,
-                        y + 0.21f,
-                        PlatformY(index + 1) + 0.21f);
+                        y + 0.24f,
+                        PlatformY(index + 1) + 0.24f);
                 }
 
                 if (index % 3 == 1)
@@ -994,8 +994,8 @@ namespace ReverseBell.Prototype
         {
             CreateStairFlight(
                 0,
-                -3.46f,
-                PlatformY(0) + 0.21f,
+                -3.5f,
+                PlatformY(0) + 0.24f,
                 "Tower Entrance");
         }
 
