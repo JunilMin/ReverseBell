@@ -1048,6 +1048,17 @@ namespace ReverseBell.Prototype
                 new Vector2(EndX, endY));
             ParentToFloorSection(climbZone, floorIndex);
 
+            GameObject stairShadow = CreateVisualBlock(
+                stairName + " Dark Backing",
+                new Vector2(
+                    (StartX + EndX) * 0.5f,
+                    (startY + endY) * 0.5f - 0.18f),
+                new Vector2(length, 0.82f),
+                new Color(0.025f, 0.03f, 0.045f, 0.96f));
+            stairShadow.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+            stairShadow.GetComponent<SpriteRenderer>().sortingOrder = 1;
+            ParentToFloorSection(stairShadow, floorIndex);
+
             Color stairColor = Color.Lerp(PlatformColor, AccentColor, 0.28f);
             for (int stepIndex = 0; stepIndex < StepCount; stepIndex++)
             {
@@ -1059,7 +1070,7 @@ namespace ReverseBell.Prototype
                     new Vector2(x, y),
                     new Vector2(1.35f, 0.22f),
                     stairColor);
-                DungeonCastleVisuals.StyleFloor(step, 2);
+                DungeonCastleVisuals.StyleStair(step, 3);
                 ParentToFloorSection(step, floorIndex);
             }
 
@@ -1487,17 +1498,38 @@ namespace ReverseBell.Prototype
 
         public static void StyleFloor(GameObject target, int sortingOrder = 1)
         {
-            ApplyTiledSprite(target, GetStoneFloor(), sortingOrder);
+            ApplyTiledSprite(
+                target,
+                GetStoneFloor(),
+                sortingOrder,
+                new Color(0.78f, 0.82f, 0.9f));
         }
 
         public static void StyleWall(GameObject target, int sortingOrder = -4)
         {
-            ApplyTiledSprite(target, GetStoneWall(), sortingOrder);
+            ApplyTiledSprite(
+                target,
+                GetStoneWall(),
+                sortingOrder,
+                new Color(0.34f, 0.39f, 0.5f));
         }
 
         public static void StyleTrim(GameObject target, int sortingOrder = 0)
         {
-            ApplyTiledSprite(target, GetStoneTrim(), sortingOrder);
+            ApplyTiledSprite(
+                target,
+                GetStoneTrim(),
+                sortingOrder,
+                new Color(0.58f, 0.62f, 0.72f));
+        }
+
+        public static void StyleStair(GameObject target, int sortingOrder = 3)
+        {
+            ApplyTiledSprite(
+                target,
+                GetStoneFloor(),
+                sortingOrder,
+                new Color(1f, 0.68f, 0.28f));
         }
 
         private static Sprite GetStoneFloor()
@@ -1537,7 +1569,8 @@ namespace ReverseBell.Prototype
         private static void ApplyTiledSprite(
             GameObject target,
             Sprite sprite,
-            int sortingOrder)
+            int sortingOrder,
+            Color tint)
         {
             if (target == null || sprite == null)
             {
@@ -1554,7 +1587,7 @@ namespace ReverseBell.Prototype
             }
 
             renderer.sprite = sprite;
-            renderer.color = Color.white;
+            renderer.color = tint;
             renderer.drawMode = SpriteDrawMode.Tiled;
             renderer.size = worldSize;
             renderer.sortingOrder = sortingOrder;

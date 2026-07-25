@@ -66,6 +66,13 @@ namespace ReverseBell.Tests
             Assert.That(
                 firstWalkway.GetComponent<SpriteRenderer>().drawMode,
                 Is.EqualTo(SpriteDrawMode.Tiled));
+            GameObject firstStairStep = GameObject.Find("Stairs 1 to 2 Step 1");
+            GameObject firstStairBacking = GameObject.Find("Stairs 1 to 2 Dark Backing");
+            Assert.That(firstStairStep, Is.Not.Null);
+            Assert.That(firstStairBacking, Is.Not.Null);
+            Assert.That(
+                firstStairStep.GetComponent<SpriteRenderer>().color.r,
+                Is.GreaterThan(firstWalkway.GetComponent<SpriteRenderer>().color.r));
 
             HeroSwordsmanVisual hero = Object.FindFirstObjectByType<HeroSwordsmanVisual>();
             hero.SetPose(1f, 0f, true, HeroActionState.None);
